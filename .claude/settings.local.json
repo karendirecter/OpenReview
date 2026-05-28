@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: bootstrap app settings *)",
+      "Bash(git commit -m 'feat: add review domain models *)",
+      "Bash(git commit -m 'feat: add diff line mapping *)",
+      "Bash(git commit -m 'docs: add cold-start verification record in SPEC_PROCESS.md *)",
+      "Bash(git push *)"
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
+}
