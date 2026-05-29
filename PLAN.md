@@ -443,7 +443,7 @@ class RenderedComment(BaseModel):
 - Test: `tests/integration/fixtures/sample_pr_diff.patch`
 - Test: `tests/integration/fixtures/sample_python_file.py`
 
-- [ ] **Step 1: Write the failing diff parser test and fixture files**
+- [x] **Step 1: Write the failing diff parser test and fixture files**
 
 `tests/integration/fixtures/sample_pr_diff.patch`
 ```diff
@@ -483,12 +483,9 @@ def test_build_position_mapping_returns_added_line_positions():
     assert mapping[3] == 4
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_diff_parser.py::test_build_position_mapping_returns_added_line_positions -v`
-Expected: FAIL with missing `build_position_mapping`.
-
-- [ ] **Step 3: Write minimal diff parser implementation**
+- [x] **Step 3: Write minimal diff parser implementation**
 
 `app/review/diff_parser.py`
 ```python
@@ -514,10 +511,7 @@ def build_position_mapping(patch: str, new_start: int) -> dict[int, int]:
 
 Implementation note: this starter version proves the mapping contract for a single hunk. During later expansion, replace the manual parser with `unidiff`-based parsing so multi-hunk patches and GitHub review positions remain precise.
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `uv run pytest tests/unit/test_diff_parser.py::test_build_position_mapping_returns_added_line_positions -v`
-Expected: PASS.
+- [x] **Step 4: Run test to verify it passes**
 
 - [ ] **Step 5: Commit**
 
