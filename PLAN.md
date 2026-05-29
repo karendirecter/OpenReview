@@ -16,27 +16,27 @@
 
 **Before starting any task, complete and verify the repository and environment setup below.**
 
-- [ ] **Step 0.1: Verify the current Git repository state**
+- [x] **Step 0.1: Verify the current Git repository state**
 
 Run: `git status --short --branch`
 Expected: The command succeeds and shows the current branch and working tree state.
 
-- [ ] **Step 0.2: Verify the remote repository configuration**
+- [x] **Step 0.2: Verify the remote repository configuration**
 
 Run: `git remote -v`
 Expected: An `origin` remote exists and points to the project repository; if no remote exists, stop and add the correct remote before continuing.
 
-- [ ] **Step 0.3: Switch to the cold-start branch**
+- [x] **Step 0.3: Switch to the cold-start branch**
 
 Run: `git checkout cold-start || git checkout -b cold-start`
 Expected: The current branch becomes `cold-start`.
 
-- [ ] **Step 0.4: Verify Python and uv prerequisites**
+- [x] **Step 0.4: Verify Python and uv prerequisites**
 
 Run: `python --version && uv --version`
 Expected: Python reports version `3.11` or newer, and `uv` is installed.
 
-- [ ] **Step 0.5: Create the initial directory skeleton**
+- [x] **Step 0.5: Create the initial directory skeleton**
 
 Run: `mkdir -p app app/github app/review app/rules app/llm app/prompts scripts tests tests/unit tests/integration tests/integration/fixtures`
 Expected: The application and test directories exist before any file-writing steps begin.
@@ -264,7 +264,7 @@ Environment variable notes:
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .gitignore pyproject.toml app/__init__.py app/main.py app/config.py .env.example tests/conftest.py tests/unit/__init__.py tests/integration/__init__.py tests/unit/test_config.py
@@ -562,7 +562,7 @@ def select_review_context(diff_hunks: list[str], file_content: str, use_full_fil
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/context_loader.py tests/unit/test_context_loader.py tests/integration/fixtures/sample_python_file.py
@@ -575,7 +575,7 @@ git commit -m "feat: add review context loader"
 - Create: `app/review/schema.py`
 - Test: `tests/unit/test_schema_validation.py`
 
-- [ ] **Step 1: Write the failing schema validation test**
+- [x] **Step 1: Write the failing schema validation test**
 
 ```python
 from app.review.schema import validate_llm_payload
@@ -607,12 +607,12 @@ def test_validate_llm_payload_rejects_unknown_file_path():
     assert findings == []
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v`
 Expected: FAIL with missing `validate_llm_payload`
 
-- [ ] **Step 3: Write minimal schema validation implementation**
+- [x] **Step 3: Write minimal schema validation implementation**
 
 ```python
 from pydantic import BaseModel
@@ -664,12 +664,12 @@ def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_s
     return findings
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/schema.py tests/unit/test_schema_validation.py
@@ -682,7 +682,7 @@ git commit -m "feat: add llm payload validation"
 - Create: `app/review/rendering.py`
 - Test: `tests/unit/test_rendering.py`
 
-- [ ] **Step 1: Write the failing rendering test**
+- [x] **Step 1: Write the failing rendering test**
 
 ```python
 from app.review.models import ReviewFinding
@@ -711,12 +711,12 @@ def test_render_inline_comment_wraps_suggestion_block():
     assert "Blocking I/O in async route" in body
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_rendering.py::test_render_inline_comment_wraps_suggestion_block -v`
 Expected: FAIL with missing `render_inline_comment`
 
-- [ ] **Step 3: Write minimal rendering implementation**
+- [x] **Step 3: Write minimal rendering implementation**
 
 ```python
 from app.review.models import ReviewFinding
@@ -742,12 +742,12 @@ def render_inline_comment(finding: ReviewFinding) -> str:
     return "\n".join(lines)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_rendering.py::test_render_inline_comment_wraps_suggestion_block -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/rendering.py tests/unit/test_rendering.py
@@ -761,7 +761,7 @@ git commit -m "feat: add review comment rendering"
 - Create: `app/rules/registry.py`
 - Test: `tests/unit/test_rules_registry.py`
 
-- [ ] **Step 1: Write the failing analyzer registry test**
+- [x] **Step 1: Write the failing analyzer registry test**
 
 ```python
 from app.review.models import IssueHit
@@ -790,12 +790,12 @@ def test_run_analyzers_collects_hits_from_all_plugins():
     assert len(hits) == 2
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_rules_registry.py::test_run_analyzers_collects_hits_from_all_plugins -v`
 Expected: FAIL with missing `run_analyzers`
 
-- [ ] **Step 3: Write minimal analyzer protocol and registry**
+- [x] **Step 3: Write minimal analyzer protocol and registry**
 
 ```python
 from typing import Protocol
@@ -820,12 +820,12 @@ def run_analyzers(analyzers: list, file_path: str, diff: str) -> list[IssueHit]:
     return results
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_rules_registry.py::test_run_analyzers_collects_hits_from_all_plugins -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/rules/base.py app/rules/registry.py tests/unit/test_rules_registry.py
@@ -838,7 +838,7 @@ git commit -m "feat: add pluggable rule registry"
 - Create: `app/rules/diff_general.py`
 - Test: `tests/unit/test_rules_registry.py`
 
-- [ ] **Step 1: Write the failing general diff rule test**
+- [x] **Step 1: Write the failing general diff rule test**
 
 ```python
 from app.rules.diff_general import GeneralDiffAnalyzer
@@ -854,12 +854,12 @@ def test_general_diff_analyzer_flags_broad_exception_pass():
     assert hits[0].rule_id == "diff.exception-swallow"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_rules_registry.py::test_general_diff_analyzer_flags_broad_exception_pass -v`
 Expected: FAIL with missing `GeneralDiffAnalyzer`
 
-- [ ] **Step 3: Write minimal general diff analyzer implementation**
+- [x] **Step 3: Write minimal general diff analyzer implementation**
 
 ```python
 from app.review.models import IssueHit
@@ -886,12 +886,12 @@ class GeneralDiffAnalyzer:
         return []
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_rules_registry.py::test_general_diff_analyzer_flags_broad_exception_pass -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/rules/diff_general.py tests/unit/test_rules_registry.py
@@ -904,7 +904,7 @@ git commit -m "feat: add general diff heuristics"
 - Create: `app/rules/python_ast.py`
 - Test: `tests/unit/test_rules_python_ast.py`
 
-- [ ] **Step 1: Write the failing Python AST analyzer test**
+- [x] **Step 1: Write the failing Python AST analyzer test**
 
 ```python
 from app.rules.python_ast import PythonAstAnalyzer
@@ -925,12 +925,12 @@ def test_python_ast_analyzer_flags_blocking_sleep_in_async_function():
     assert any(hit.rule_id == "python.async-blocking-io" for hit in hits)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_rules_python_ast.py::test_python_ast_analyzer_flags_blocking_sleep_in_async_function -v`
 Expected: FAIL with missing `PythonAstAnalyzer`
 
-- [ ] **Step 3: Write minimal AST analyzer implementation**
+- [x] **Step 3: Write minimal AST analyzer implementation**
 
 ```python
 import ast
@@ -966,12 +966,12 @@ class PythonAstAnalyzer:
         return hits
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_rules_python_ast.py::test_python_ast_analyzer_flags_blocking_sleep_in_async_function -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/rules/python_ast.py tests/unit/test_rules_python_ast.py
@@ -984,7 +984,7 @@ git commit -m "feat: add python ast analyzer"
 - Create: `app/rules/semgrep_runner.py`
 - Test: `tests/unit/test_rules_semgrep_runner.py`
 
-- [ ] **Step 1: Write the failing Semgrep adapter test**
+- [x] **Step 1: Write the failing Semgrep adapter test**
 
 ```python
 from app.rules.semgrep_runner import parse_semgrep_output
@@ -1012,12 +1012,12 @@ def test_parse_semgrep_output_returns_issue_hits():
     assert hits[0].rule_id == "python.resource-leak"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_rules_semgrep_runner.py::test_parse_semgrep_output_returns_issue_hits -v`
 Expected: FAIL with missing `parse_semgrep_output`
 
-- [ ] **Step 3: Write minimal Semgrep adapter implementation**
+- [x] **Step 3: Write minimal Semgrep adapter implementation**
 
 ```python
 from app.review.models import IssueHit
@@ -1041,12 +1041,12 @@ def parse_semgrep_output(payload: dict, commit_sha: str) -> list[IssueHit]:
     return hits
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_rules_semgrep_runner.py::test_parse_semgrep_output_returns_issue_hits -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/rules/semgrep_runner.py tests/unit/test_rules_semgrep_runner.py
