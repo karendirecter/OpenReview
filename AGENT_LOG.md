@@ -130,3 +130,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_llm_client.py::test_build_review_prompt_includes_commit_sha_and_json_contract -v` 稳定报 `ModuleNotFoundError: No module named 'app.prompts'`；初版 prompt 因未包含带引号的 `"findings"` 契约字符串导致测试失败，修正 `app/prompts/review_prompt.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py`、`tests/unit/test_llm_client.py` 共 12 项通过。
 - **人工干预**：无额外人工改写；继续遵循用户要求，仅更新 `AGENT_LOG.md`，不回写 `PLAN.md`。
 - **学到的教训**：Prompt builder 的测试应该直接钉住关键契约字面量（如 `"findings"`），这样能更早发现“语义相近但不满足解析约束”的提示词缺陷。
+
+## 2026-05-29 Task 13 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 13
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 Task11 的同模块 worktree 中实现编排层最小护栏；对照 `SPEC.md` 中“head_sha 漂移则任务过期”的约束，先实现 `ensure_not_stale` 作为 Stage 1/Stage 2 orchestrator 的第一条硬性守卫。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_orchestrator.py::test_ensure_not_stale_raises_when_head_sha_changes -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.orchestrator'`；补齐 `app/review/orchestrator.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py`、`tests/unit/test_llm_client.py`、`tests/unit/test_orchestrator.py` 共 13 项通过。
+- **人工干预**：无额外人工改写；继续沿用用户要求，在同一 Task11 分支中串行推进相关内核模块。
+- **学到的教训**：先把 stale commit guard 独立成一个可测试函数，比一开始就把完整 orchestrator 流程揉进一个大对象更容易锁定漂移控制语义。
