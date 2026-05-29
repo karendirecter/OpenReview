@@ -65,3 +65,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.schema'`；补齐 `app/review/schema.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py` 共 5 项通过。
 - **人工干预**：用户明确说明后续 `PLAN.md` 由其自行维护，因此从 Task 5 起只更新 `AGENT_LOG.md`，不再改写 `PLAN.md`。
 - **学到的教训**：当用户收回 `PLAN.md` 维护权后，进度与偏差说明都必须集中沉淀到 `AGENT_LOG.md`，否则过程证据会断档。
+
+## 2026-05-29 Task 6 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 6
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 `task5-schema-validation` worktree 中完善基础接口；对照 `SPEC.md` 中结果渲染层的 summary / inline / suggestion 语义，先实现最小版 `render_inline_comment`，确保 suggestion 代码块按 GitHub 语法包裹。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rendering.py::test_render_inline_comment_wraps_suggestion_block -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.rendering'`；补齐 `app/review/rendering.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py` 共 6 项通过。
+- **人工干预**：无额外人工改写；延续用户关于“Task5-Task8 先共用同一 worktree”的边界设定继续推进。
+- **学到的教训**：在基础接口阶段，先用单一明确断言把 suggestion 渲染 contract 钉住，比一开始就扩展 summary/render_mode 全量行为更稳妥。
