@@ -18,3 +18,13 @@
 - **subagent 输出的关键片段或链接**：暂无 commit；已完成红灯验证命令 `uv run pytest tests/unit/test_config.py::test_settings_load_required_review_defaults -v`，先报 `ModuleNotFoundError: No module named 'app'`，随后在最小实现后转为通过。
 - **人工干预**：无额外代码改写；仅按课程要求同步勾选 `PLAN.md` 中已完成的 Step 1-4。
 - **学到的教训**：在空仓启动阶段，红灯可以是缺模块错误，只要失败原因确实对应“功能尚不存在”，即可作为有效 TDD 起点。
+
+## 2026-05-29 Task 2 启动与 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 2
+- **触发的 Superpowers 技能**：`using-git-worktrees`、`test-driven-development`
+- **关键 prompt / context 配置**：新建 `task2-review-models` worktree；为保持任务独立又继承已完成基础，先 cherry-pick Task 1 提交 `bb23ebf` 再进入 Task 2 的 TDD。
+- **工作区 / 分支**：`D:\course\2026_spring\AI4SE\project\.claude\worktrees\task2-review-models` / `worktree-task2-review-models`
+- **subagent 输出的关键片段或链接**：Task 2 红灯验证命令 `uv run pytest tests/unit/test_models.py::test_review_task_binds_review_commit_sha -v` 报 `ModuleNotFoundError: No module named 'app.review'`；补齐 `app/review/__init__.py` 与 `app/review/models.py` 后，`tests/unit/test_config.py` 与 `tests/unit/test_models.py` 共 2 项通过。
+- **人工干预**：无额外人工改写；同步勾选 `PLAN.md` 中 Task 2 Step 1-4。
+- **学到的教训**：后续模块 worktree 若依赖已完成基础提交，应显式记录 cherry-pick 的来源提交，保证 AGENT_LOG 可追踪模块间承接关系。
