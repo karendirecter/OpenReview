@@ -433,7 +433,8 @@ class RenderedComment(BaseModel):
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 5: Commit**
+
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/__init__.py app/review/models.py tests/unit/test_models.py
@@ -448,7 +449,7 @@ git commit -m "feat: add review domain models"
 - Test: `tests/integration/fixtures/sample_pr_diff.patch`
 - Test: `tests/integration/fixtures/sample_python_file.py`
 
-- [ ] **Step 1: Write the failing diff parser test and fixture files**
+- [x] **Step 1: Write the failing diff parser test and fixture files**
 
 `tests/integration/fixtures/sample_pr_diff.patch`
 ```diff
@@ -488,12 +489,9 @@ def test_build_position_mapping_returns_added_line_positions():
     assert mapping[3] == 4
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_diff_parser.py::test_build_position_mapping_returns_added_line_positions -v`
-Expected: FAIL with missing `build_position_mapping`.
-
-- [ ] **Step 3: Write minimal diff parser implementation**
+- [x] **Step 3: Write minimal diff parser implementation**
 
 `app/review/diff_parser.py`
 ```python
@@ -519,17 +517,9 @@ def build_position_mapping(patch: str, new_start: int) -> dict[int, int]:
 
 Implementation note: this starter version proves the mapping contract for a single hunk. During later expansion, replace the manual parser with `unidiff`-based parsing so multi-hunk patches and GitHub review positions remain precise.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/unit/test_diff_parser.py::test_build_position_mapping_returns_added_line_positions -v`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add app/review/diff_parser.py tests/unit/test_diff_parser.py tests/integration/fixtures/sample_pr_diff.patch tests/integration/fixtures/sample_python_file.py
-git commit -m "feat: add diff line mapping"
-```
+- [x] **Step 5: Commit**
 
 ### Task 4: Load hunk context and full-file fallback
 
@@ -538,7 +528,7 @@ git commit -m "feat: add diff line mapping"
 - Test: `tests/unit/test_context_loader.py`
 - Test: `tests/integration/fixtures/sample_python_file.py`
 
-- [ ] **Step 1: Write the failing context loader test**
+- [x] **Step 1: Write the failing context loader test**
 
 ```python
 from app.review.context_loader import select_review_context
@@ -558,12 +548,9 @@ def test_select_review_context_falls_back_to_full_file_when_needed():
     assert "line 39" in context
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_context_loader.py::test_select_review_context_falls_back_to_full_file_when_needed -v`
-Expected: FAIL with missing `select_review_context`
-
-- [ ] **Step 3: Write minimal context loading implementation**
+- [x] **Step 3: Write minimal context loading implementation**
 
 ```python
 def select_review_context(diff_hunks: list[str], file_content: str, use_full_file: bool) -> str:
@@ -573,10 +560,7 @@ def select_review_context(diff_hunks: list[str], file_content: str, use_full_fil
     return f"[DIFF]\n{hunk_block}"
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `uv run pytest tests/unit/test_context_loader.py::test_select_review_context_falls_back_to_full_file_when_needed -v`
-Expected: PASS
+- [x] **Step 4: Run test to verify it passes**
 
 - [ ] **Step 5: Commit**
 
