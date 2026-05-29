@@ -56,3 +56,39 @@
 - **人工干预**：用户明确确认 Task 4 继续留在 Task 3 的同一 worktree 中完成；Task 5 再开新 worktree。
 - **学到的教训**：同一模块内紧邻任务共享同一个 worktree 更符合“一个模块一个 worktree”的边界，也减少重复继承基线的成本。
 
+## 2026-05-29 Task 5 启动与 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 5
+- **触发的 Superpowers 技能**：`using-git-worktrees`、`test-driven-development`
+- **关键 prompt / context 配置**：在用户完成 Task3-4 的 PR merge 后，以最新远程 `main-agent` 作为权威基线创建 `task5-schema-validation` worktree；对照 `SPEC.md` 中 JSON Schema、allowed file、正整数行号与恶意输入防御要求，实现最小版 LLM payload 校验。
+- **工作区 / 分支**：`D:\course\2026_spring\AI4SE\project\.claude\worktrees\task5-schema-validation` / `worktree-task5-schema-validation`
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.schema'`；补齐 `app/review/schema.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py` 共 5 项通过。
+- **人工干预**：用户明确说明后续 `PLAN.md` 由其自行维护，因此从 Task 5 起只更新 `AGENT_LOG.md`，不再改写 `PLAN.md`。
+- **学到的教训**：当用户收回 `PLAN.md` 维护权后，进度与偏差说明都必须集中沉淀到 `AGENT_LOG.md`，否则过程证据会断档。
+
+## 2026-05-29 Task 6 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 6
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 `task5-schema-validation` worktree 中完善基础接口；对照 `SPEC.md` 中结果渲染层的 summary / inline / suggestion 语义，先实现最小版 `render_inline_comment`，确保 suggestion 代码块按 GitHub 语法包裹。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rendering.py::test_render_inline_comment_wraps_suggestion_block -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.rendering'`；补齐 `app/review/rendering.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py` 共 6 项通过。
+- **人工干预**：无额外人工改写；延续用户关于“Task5-Task8 先共用同一 worktree”的边界设定继续推进。
+- **学到的教训**：在基础接口阶段，先用单一明确断言把 suggestion 渲染 contract 钉住，比一开始就扩展 summary/render_mode 全量行为更稳妥。
+
+## 2026-05-29 Task 7 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 7
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在同一基础接口 worktree 中补齐规则层最小入口；先实现可插拔 analyzer protocol 与 registry，保证后续通用 diff 规则和 Python 规则都能通过同一 `run_analyzers` 收敛输出 `IssueHit`。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_registry.py::test_run_analyzers_collects_hits_from_all_plugins -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules'`；补齐 `app/rules/base.py` 与 `app/rules/registry.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py` 共 7 项通过。
+- **人工干预**：无额外人工改写；继续遵循“Task5-Task8 共用 task5 worktree”的用户边界。
+- **学到的教训**：先把规则层的聚合接口固定下来，再往里面塞具体 analyzer，会比先写具体规则再回头抽象 registry 更省返工。
+
+## 2026-05-29 Task 8 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 8
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在基础接口 worktree 中补齐通用 diff 规则；对照 `SPEC.md` 中“通用 Diff 审查”与 `IssueHit` 输出约定，先用 `except Exception: pass` 这一类高风险吞异常模式钉住最小启发式 analyzer。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_registry.py::test_general_diff_analyzer_flags_broad_exception_pass -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.diff_general'`；补齐 `app/rules/diff_general.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py` 共 8 项通过。
+- **人工干预**：无额外人工改写；继续沿用用户确认的 Task5-Task8 共享 worktree 边界。
+- **学到的教训**：先用一个高置信、可解释的通用 diff 模式建立 analyzer 结构，比一开始追求覆盖很多弱规则更利于后续扩展和调试。
