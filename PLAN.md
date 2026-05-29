@@ -513,12 +513,7 @@ Implementation note: this starter version proves the mapping contract for a sing
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add app/review/diff_parser.py tests/unit/test_diff_parser.py tests/integration/fixtures/sample_pr_diff.patch tests/integration/fixtures/sample_python_file.py
-git commit -m "feat: add diff line mapping"
-```
+- [x] **Step 5: Commit**
 
 ### Task 4: Load hunk context and full-file fallback
 
@@ -527,7 +522,7 @@ git commit -m "feat: add diff line mapping"
 - Test: `tests/unit/test_context_loader.py`
 - Test: `tests/integration/fixtures/sample_python_file.py`
 
-- [ ] **Step 1: Write the failing context loader test**
+- [x] **Step 1: Write the failing context loader test**
 
 ```python
 from app.review.context_loader import select_review_context
@@ -547,12 +542,9 @@ def test_select_review_context_falls_back_to_full_file_when_needed():
     assert "line 39" in context
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_context_loader.py::test_select_review_context_falls_back_to_full_file_when_needed -v`
-Expected: FAIL with missing `select_review_context`
-
-- [ ] **Step 3: Write minimal context loading implementation**
+- [x] **Step 3: Write minimal context loading implementation**
 
 ```python
 def select_review_context(diff_hunks: list[str], file_content: str, use_full_file: bool) -> str:
@@ -562,10 +554,7 @@ def select_review_context(diff_hunks: list[str], file_content: str, use_full_fil
     return f"[DIFF]\n{hunk_block}"
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `uv run pytest tests/unit/test_context_loader.py::test_select_review_context_falls_back_to_full_file_when_needed -v`
-Expected: PASS
+- [x] **Step 4: Run test to verify it passes**
 
 - [ ] **Step 5: Commit**
 

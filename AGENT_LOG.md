@@ -46,3 +46,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_diff_parser.py::test_build_position_mapping_returns_added_line_positions -v` 最终稳定报 `ModuleNotFoundError: No module named 'app.review.diff_parser'`；补齐 `app/review/diff_parser.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py` 共 3 项通过。
 - **人工干预**：无额外人工改写；同步勾选 `PLAN.md` 中 Task 3 Step 1-4。
 - **学到的教训**：当红灯先暴露的是基线缺口而不是目标函数缺失时，应先修复可运行基线，再重新获得针对目标能力的有效红灯。
+
+## 2026-05-29 Task 4 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 4
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 Task 3 的同模块 worktree 中完成上下文加载；对照 `SPEC.md` 中“必须包含当前 diff hunk，必要时允许读取完整文件”实现最小版 `select_review_context`。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_context_loader.py::test_select_review_context_falls_back_to_full_file_when_needed -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.context_loader'`；补齐 `app/review/context_loader.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py` 共 4 项通过。
+- **人工干预**：用户明确确认 Task 4 继续留在 Task 3 的同一 worktree 中完成；Task 5 再开新 worktree。
+- **学到的教训**：同一模块内紧邻任务共享同一个 worktree 更符合“一个模块一个 worktree”的边界，也减少重复继承基线的成本。
