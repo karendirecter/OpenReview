@@ -1,4 +1,4 @@
-from app.review.models import ReviewFinding
+from app.review.models import RenderedComment, ReviewFinding, ReviewResult
 
 
 def render_inline_comment(finding: ReviewFinding) -> str:
@@ -19,3 +19,46 @@ def render_inline_comment(finding: ReviewFinding) -> str:
             ]
         )
     return "\n".join(lines)
+
+
+def render_summary_comment(result: ReviewResult) -> str:
+    lines = [
+        "## 自动代码评审结果",
+        "",
+        f"- Commit: `{result.review_commit_sha}`",
+        f"- Overall risk: `{result.overall_risk}`",
+        f"- Stage 1 candidates: {result.stats.get('stage1_candidates', 0)}",
+        f"- Final findings: {result.stats.get('stage2_findings', len(result.findings))}",
+        "",
+        result.summary,
+    ]
+    if result.findings:
+        lines.extend(["", "### Findings"])
+        for finding in result.findings:
+            lines.append(f"- `{finding.file_path}:{finding.line_number}` {finding.issue_title}")
+    return "\n".join(lines)
+
+
+def render_review_comments(result: ReviewResult) -> list[RenderedComment]:
+    comments = [
+        RenderedComment(
+            comment_type="summary",
+            body=render_summary_comment(result),
+            commit_sha=result.review_commit_sha,
+        )
+    ]
+
+    for finding in result.findings:
+        comments.append(
+            RenderedComment(
+                comment_type="inline",
+                body=render_inline_comment(finding),
+                file_path=finding.file_path,
+                line_number=finding.line_number,
+                end_line_number=finding.end_line_number,
+                side="RIGHT",
+                commit_sha=finding.commit_sha,
+            )
+        )
+
+    return comments

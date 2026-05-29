@@ -1060,7 +1060,7 @@ git commit -m "feat: add semgrep analyzer adapter"
 - Create: `app/llm/openai_compatible.py`
 - Test: `tests/unit/test_llm_client.py`
 
-- [ ] **Step 1: Write the failing LLM client test**
+- [x] **Step 1: Write the failing LLM client test**
 
 ```python
 from app.llm.openai_compatible import build_review_request
@@ -1076,12 +1076,12 @@ def test_build_review_request_targets_configured_model():
     assert request["response_format"]["type"] == "json_object"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_llm_client.py::test_build_review_request_targets_configured_model -v`
 Expected: FAIL with missing `build_review_request`
 
-- [ ] **Step 3: Write minimal LLM client implementation**
+- [x] **Step 3: Write minimal LLM client implementation**
 
 ```python
 from typing import Protocol
@@ -1102,12 +1102,12 @@ def build_review_request(model: str, prompt: str) -> dict:
     }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_llm_client.py::test_build_review_request_targets_configured_model -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/llm/base.py app/llm/openai_compatible.py tests/unit/test_llm_client.py
@@ -1120,7 +1120,7 @@ git commit -m "feat: add openai-compatible llm client"
 - Create: `app/prompts/review_prompt.py`
 - Test: `tests/unit/test_llm_client.py`
 
-- [ ] **Step 1: Write the failing prompt builder test**
+- [x] **Step 1: Write the failing prompt builder test**
 
 ```python
 from app.prompts.review_prompt import build_review_prompt
@@ -1139,12 +1139,12 @@ def test_build_review_prompt_includes_commit_sha_and_json_contract():
     assert "Do not return extra text" in prompt
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_llm_client.py::test_build_review_prompt_includes_commit_sha_and_json_contract -v`
 Expected: FAIL with missing `build_review_prompt`
 
-- [ ] **Step 3: Write minimal prompt builder implementation**
+- [x] **Step 3: Write minimal prompt builder implementation**
 
 ```python
 def build_review_prompt(review_commit_sha: str, file_path: str, diff_context: str, candidate_summary: str) -> str:
@@ -1160,12 +1160,12 @@ Do not return extra text.
 """.strip()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_llm_client.py::test_build_review_prompt_includes_commit_sha_and_json_contract -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/prompts/review_prompt.py tests/unit/test_llm_client.py
@@ -1179,7 +1179,7 @@ git commit -m "feat: add structured review prompt builder"
 - Test: `tests/unit/test_orchestrator.py`
 - Test: `tests/integration/test_review_pipeline.py`
 
-- [ ] **Step 1: Write the failing orchestrator stale commit test**
+- [x] **Step 1: Write the failing orchestrator stale commit test**
 
 ```python
 import pytest
@@ -1204,12 +1204,12 @@ def test_ensure_not_stale_raises_when_head_sha_changes():
         ensure_not_stale(task)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_orchestrator.py::test_ensure_not_stale_raises_when_head_sha_changes -v`
 Expected: FAIL with missing `ensure_not_stale`
 
-- [ ] **Step 3: Write minimal orchestrator implementation**
+- [x] **Step 3: Write minimal orchestrator implementation**
 
 ```python
 from app.review.models import ReviewTask
@@ -1220,12 +1220,12 @@ def ensure_not_stale(task: ReviewTask) -> None:
         raise RuntimeError("stale review commit")
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_orchestrator.py::test_ensure_not_stale_raises_when_head_sha_changes -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/orchestrator.py tests/unit/test_orchestrator.py tests/integration/test_review_pipeline.py
@@ -1238,7 +1238,7 @@ git commit -m "feat: add review orchestrator guards"
 - Create: `tests/unit/test_robustness_llm_payloads.py`
 - Modify: `app/review/schema.py`
 
-- [ ] **Step 1: Write the failing malicious payload regression tests**
+- [x] **Step 1: Write the failing malicious payload regression tests**
 
 ```python
 from app.review.schema import validate_llm_payload
@@ -1268,12 +1268,12 @@ def test_validate_llm_payload_drops_negative_line_number():
     assert validate_llm_payload(payload, {"app/a.py"}, "head123") == []
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_robustness_llm_payloads.py::test_validate_llm_payload_drops_negative_line_number -v`
 Expected: FAIL if negative line numbers are not rejected
 
-- [ ] **Step 3: Tighten payload validation implementation**
+- [x] **Step 3: Tighten payload validation implementation**
 
 ```python
 def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_sha: str) -> list[ReviewFinding]:
@@ -1307,12 +1307,12 @@ def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_s
     return findings
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_robustness_llm_payloads.py::test_validate_llm_payload_drops_negative_line_number -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/schema.py tests/unit/test_robustness_llm_payloads.py
@@ -1327,7 +1327,7 @@ git commit -m "test: harden malicious llm payload handling"
 - Test: `tests/integration/test_github_webhook_route.py`
 - Modify: `app/main.py`
 
-- [ ] **Step 1: Write the failing webhook route test**
+- [x] **Step 1: Write the failing webhook route test**
 
 ```python
 from fastapi.testclient import TestClient
@@ -1349,12 +1349,12 @@ def test_github_webhook_ignores_non_review_comment():
     assert response.json() == {"status": "ignored"}
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/integration/test_github_webhook_route.py::test_github_webhook_ignores_non_review_comment -v`
 Expected: FAIL with missing route or wrong response
 
-- [ ] **Step 3: Write minimal webhook route implementation**
+- [x] **Step 3: Write minimal webhook route implementation**
 
 `app/github/webhook.py`
 ```python
@@ -1384,12 +1384,12 @@ async def github_webhook(request: Request) -> dict[str, str]:
     return {"status": "accepted"}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/integration/test_github_webhook_route.py::test_github_webhook_ignores_non_review_comment -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/github/models.py app/github/webhook.py app/main.py tests/integration/test_github_webhook_route.py
@@ -1402,7 +1402,7 @@ git commit -m "feat: add github review command webhook"
 - Create: `scripts/run_local_review.py`
 - Test: `tests/integration/test_review_pipeline.py`
 
-- [ ] **Step 1: Write the failing local review entry test**
+- [x] **Step 1: Write the failing local review entry test**
 
 ```python
 from scripts.run_local_review import build_local_task
@@ -1415,12 +1415,12 @@ def test_build_local_task_sets_command_trigger_type():
     assert task.review_commit_sha == "head123"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/integration/test_review_pipeline.py::test_build_local_task_sets_command_trigger_type -v`
 Expected: FAIL with missing `build_local_task`
 
-- [ ] **Step 3: Write minimal local review script implementation**
+- [x] **Step 3: Write minimal local review script implementation**
 
 ```python
 from app.review.models import ReviewTask
@@ -1439,12 +1439,12 @@ def build_local_task(repo_owner: str, repo_name: str, pr_number: int, review_com
     )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/integration/test_review_pipeline.py::test_build_local_task_sets_command_trigger_type -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/run_local_review.py tests/integration/test_review_pipeline.py
@@ -1458,7 +1458,7 @@ git commit -m "feat: add local review entrypoint"
 - Create: `docker-compose.yml`
 - Modify: `.env.example`
 
-- [ ] **Step 1: Write the failing container smoke test command expectation**
+- [x] **Step 1: Write the failing container smoke test command expectation**
 
 ```text
 Command to validate after implementation:
@@ -1469,12 +1469,12 @@ docker compose up --build
 Expected: FastAPI app starts and exposes the webhook service
 ```
 
-- [ ] **Step 2: Run container validation to verify it fails before packaging exists**
+- [x] **Step 2: Run container validation to verify it fails before packaging exists**
 
 Run: `docker build -t github-pr-auto-review .`
 Expected: FAIL with missing `Dockerfile`
 
-- [ ] **Step 3: Write minimal container packaging files**
+- [x] **Step 3: Write minimal container packaging files**
 
 `Dockerfile`
 ```dockerfile
@@ -1497,7 +1497,7 @@ services:
       - .env
 ```
 
-- [ ] **Step 4: Run container validation to verify it passes**
+- [x] **Step 4: Run container validation to verify it passes**
 
 Run: `docker build -t github-pr-auto-review . && docker compose up --build`
 Expected: image builds successfully and FastAPI starts on port 8000
