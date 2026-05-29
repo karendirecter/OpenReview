@@ -121,3 +121,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_llm_client.py::test_build_review_request_targets_configured_model -v` 稳定报 `ModuleNotFoundError: No module named 'app.llm'`；补齐 `app/llm/base.py` 与 `app/llm/openai_compatible.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py`、`tests/unit/test_llm_client.py` 共 11 项通过。
 - **人工干预**：用户明确要求新开 Task11 分支，并强调要继承已更新到 `main-agent` 的 `PLAN.md`；同时继续保持 `PLAN.md` 由用户自行维护。
 - **学到的教训**：当计划文档由用户手工维护时，新的 worktree 不应再从旧分支继承 PLAN 变更，而必须直接从最新主线读取，否则很容易在接口约束上读到过期内容。
+
+## 2026-05-29 Task 12 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 12
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 Task11 的同模块 worktree 中补齐 Prompt 构造能力；对照 `SPEC.md` 中 commit SHA 注入、diff 上下文、候选问题摘要与严格 JSON 契约要求，实现最小版 `build_review_prompt`。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_llm_client.py::test_build_review_prompt_includes_commit_sha_and_json_contract -v` 稳定报 `ModuleNotFoundError: No module named 'app.prompts'`；初版 prompt 因未包含带引号的 `"findings"` 契约字符串导致测试失败，修正 `app/prompts/review_prompt.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py`、`tests/unit/test_llm_client.py` 共 12 项通过。
+- **人工干预**：无额外人工改写；继续遵循用户要求，仅更新 `AGENT_LOG.md`，不回写 `PLAN.md`。
+- **学到的教训**：Prompt builder 的测试应该直接钉住关键契约字面量（如 `"findings"`），这样能更早发现“语义相近但不满足解析约束”的提示词缺陷。
