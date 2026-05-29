@@ -4,3 +4,6 @@ __pycache__/
 .env
 coverage.xml
 htmlcov/
+.claude/settings.local.json
+*.private-key.pem
+*.pem

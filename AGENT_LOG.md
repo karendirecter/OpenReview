@@ -139,3 +139,73 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_orchestrator.py::test_ensure_not_stale_raises_when_head_sha_changes -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.orchestrator'`；补齐 `app/review/orchestrator.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py`、`tests/unit/test_llm_client.py`、`tests/unit/test_orchestrator.py` 共 13 项通过。
 - **人工干预**：无额外人工改写；继续沿用用户要求，在同一 Task11 分支中串行推进相关内核模块。
 - **学到的教训**：先把 stale commit guard 独立成一个可测试函数，比一开始就把完整 orchestrator 流程揉进一个大对象更容易锁定漂移控制语义。
+## 2026-05-29 Task 14 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 14
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在同一个 `task11-llm-client` worktree 内推进，按 `SPEC.md` 对 LLM 结构化输出的约束收紧 `validate_llm_payload`，确保 `line_number` 为正整数，且 `end_line_number` 不能早于 `line_number`。
+- **subagent 输出的关键片段或链接**：新增 `tests/unit/test_robustness_llm_payloads.py`，覆盖负行号与反向区间两类恶意 payload；更新 `app/review/schema.py`，对非法 finding 直接丢弃。`uv run pytest tests/unit/test_robustness_llm_payloads.py -v` 通过，共 2 项测试。
+- **人工干预**：无；遵循用户要求，仅同步 `AGENT_LOG.md`，不回写 `PLAN.md`。
+- **学到的教训**：当鲁棒性任务已被前序守卫部分覆盖时，应继续补相邻不变量的回归测试，而不是为了“制造改动”做空转实现。
+
+## 2026-05-29 Task 15 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 15
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：按 `SPEC.md` 实现最小 GitHub webhook 触发路径，只有 PR 上下文中的 `issue_comment` 且评论正文精确为 `/review` 时才进入评审流程。
+- **subagent 输出的关键片段或链接**：新增 `app/github/models.py`、`app/github/webhook.py`，并在 `app/main.py` 中加入 `POST /webhooks/github`；新增 `tests/integration/test_github_webhook_route.py`，同时覆盖 ignored 与 accepted 两种分支。`uv run pytest tests/integration/test_github_webhook_route.py -v` 通过，共 2 项测试。
+- **人工干预**：无。
+- **学到的教训**：对 webhook 入口同时保留正向触发与反向拒绝测试，能最快防住“所有 PR 评论都误触发评审”的回归。
+
+## 2026-05-29 Task 16 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 16
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：补充本地入口 helper，使评审内核可以脱离 GitHub 单独构造 `ReviewTask`，满足 `SPEC.md` 中“webhook / 本地脚本 / CLI 共享统一业务入口”的要求。
+- **subagent 输出的关键片段或链接**：新增 `scripts/run_local_review.py` 中的 `build_local_task(...)`，并新增 `tests/integration/test_review_pipeline.py`。`uv run pytest tests/integration/test_review_pipeline.py -v` 通过。
+- **人工干预**：无。
+- **学到的教训**：先固定一个最小本地任务构造器，比在每个后续流程测试里重复伪造 webhook payload 更稳、更省返工。
+
+## 2026-05-29 Task 17 容器化骨架
+
+- **时间戳与 task 编号**：2026-05-29 / Task 17
+- **触发的 Superpowers 技能**：无
+- **关键 prompt / context 配置**：补齐课程要求的容器化交付骨架：`Dockerfile`、`docker-compose.yml` 与 `.env.example`，并明确运行时环境变量约束。
+- **subagent 输出的关键片段或链接**：基于 `python:3.11-slim` 创建 Dockerfile，使用 `uv sync --frozen --no-dev` 安装运行时依赖，并通过 `uvicorn app.main:app` 启动 FastAPI；补充 `docker-compose.yml` 暴露 `8000` 端口。
+- **验证结果**：`uv run pytest -q` 通过，结果为 `18 passed in 0.20s`。本地 `docker --version` 可用；`docker build -t github-pr-auto-review .` 已尝试执行，但在解析 `python:3.11-slim` 时被外部镜像仓库连通性阻塞，因此当前只能确认容器文件已就位，尚未在此环境完成镜像构建验收。
+- **人工干预**：暂无；若后续环境可访问 Docker Hub，应在该 worktree 重新执行构建以完成 Task 17 验证闭环。
+- **学到的教训**：容器化任务要明确区分“项目侧已准备好”与“环境侧网络/仓库受限”，避免把外部依赖阻塞误记成应用缺陷。
+
+
+## 2026-05-29 GitHub App 与容器环境实连验证
+
+- **时间戳**：2026-05-29
+- **关键动作**：根据用户已填写的 `.env`，补充 `github_private_key` 的 `\\n -> \n` 归一化逻辑，保证 `.env` 中单行 PEM 私钥可被 PyGithub 正常解析。
+- **代码修正**：更新 `app/config.py`，并在 `tests/unit/test_config.py` 增加私钥换行归一化测试；`uv run pytest tests/unit/test_config.py -q` 通过。
+- **GitHub App 验证结果**：使用 `GITHUB_APP_ID`、`GITHUB_PRIVATE_KEY` 与 `GITHUB_INSTALLATION_ID` 成功访问 GitHub API，当前 app 可见 1 个 installation，目标 installation 为 `136482236`，账号 `karendirecter`，可访问仓库 `karendirecter/notion-lite`。
+- **容器验证结果**：`docker build -t github-pr-auto-review .` 成功；容器 `github-pr-auto-review` 已成功启动并通过 `/health` 检查。
+- **Webhook 验证结果**：本地 `POST /webhooks/github` 在携带 `X-GitHub-Event: issue_comment` 且评论正文为 `/review` 时返回 `{\"status\":\"accepted\"}`；未带该事件头时返回 `{\"status\":\"ignored\"}`，符合当前实现。
+- **注意事项**：日志中发现曾有请求打到 `/webhook` 与 `/` 并返回 404，因此 GitHub App 的 webhook URL 必须明确配置为 `/webhooks/github`。
+
+## 2026-05-29 评审业务流补全与真实回贴验证
+
+- **时间戳**：2026-05-29
+- **关键动作**：对照 `SPEC.md` 复查后，确认项目最大缺口不是“连通性”，而是 webhook 进入后没有真正拉取 PR、执行分析并回贴结果。为此新增 `app/github/service.py`，把 GitHub PR 拉取、`ReviewTask` 构造、Stage 1/Stage 2 编排调用与评论发布接通。
+- **代码补全**：
+  - `app/main.py`：新增 `X-Hub-Signature-256` 校验、JSON body 解码与后台任务调度。
+  - `app/github/webhook.py`：新增 HMAC-SHA256 webhook 签名校验。
+  - `app/github/models.py`：补齐 repository / issue / comment 等真实 webhook 字段。
+  - `app/review/orchestrator.py`：从单一 `ensure_not_stale` 扩展为可运行的 `review_pull_request`、Stage 1 扫描、Stage 2 LLM 复核降级与 summary 汇总。
+  - `app/review/rendering.py`：补齐 summary comment 与 inline comment 列表渲染。
+  - `app/llm/openai_compatible.py`：补齐真实 OpenAI-compatible client，允许 Stage 2 调用结构化模型输出。
+  - `app/rules/diff_general.py`：修正 broad exception 规则的行号定位，避免 inline comment 总落在错误位置。
+- **测试补充**：
+  - 新增 `tests/integration/test_github_review_service.py`
+  - 更新 `tests/integration/test_github_webhook_route.py`
+  - 全量 `uv run pytest -q` 通过，结果为 `21 passed in 0.62s`
+- **容器验证**：重建 `github-pr-auto-review` 镜像并替换运行容器，新容器健康检查通过。
+- **真实 GitHub 验证**：
+  - 读取最新 GitHub App delivery，确认真实 `/review` payload 指向 `karendirecter/notion-lite` 的 PR `#1`
+  - 用新实现对该 payload 手动补跑一次完整流程，脚本返回 `review-processed`
+  - 回读 PR 评论后确认新增 1 条顶层评论，内容为“未发现高置信正确性缺陷，检查通过。”
+  - 当前该 PR 的 review inline comment 数为 0，原因是 Stage 1 未命中候选问题，因此按规格降级为“通过总结”

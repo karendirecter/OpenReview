@@ -27,6 +27,8 @@ def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_s
             continue
         if raw.line_number <= 0:
             continue
+        if raw.end_line_number is not None and raw.end_line_number < raw.line_number:
+            continue
         findings.append(
             ReviewFinding(
                 file_path=raw.file_path,

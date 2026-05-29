@@ -1,0 +1,18 @@
+services:
+  review-app:
+    build: .
+    container_name: github-pr-auto-review
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_PRIVATE_KEY: ${GITHUB_PRIVATE_KEY}
+      GITHUB_INSTALLATION_ID: ${GITHUB_INSTALLATION_ID}
+      GITHUB_TRIGGER_MODE: ${GITHUB_TRIGGER_MODE}
+      ENABLE_PULL_REQUEST_AUTO_REVIEW: ${ENABLE_PULL_REQUEST_AUTO_REVIEW}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}

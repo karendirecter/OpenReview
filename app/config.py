@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,3 +14,8 @@ class Settings(BaseSettings):
     llm_base_url: str = Field(...)
     llm_api_key: str = Field(...)
     llm_model: str = Field(...)
+
+    @field_validator("github_private_key")
+    @classmethod
+    def normalize_github_private_key(cls, value: str) -> str:
+        return value.replace("\\n", "\n").strip()
