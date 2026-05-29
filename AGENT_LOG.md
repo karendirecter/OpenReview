@@ -102,3 +102,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_python_ast.py::test_python_ast_analyzer_flags_blocking_sleep_in_async_function -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.python_ast'`；补齐 `app/rules/python_ast.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py` 共 9 项通过。
 - **人工干预**：用户明确要求 Task9 进入新的独立 worktree；如与旧模块有冲突，以已 merge 的远程 `main-agent` 为准。
 - **学到的教训**：在 Python AST 规则层，先用单一高置信的阻塞调用模式验证 AST 遍历框架，再逐步扩展 None access 与 await 相关规则，会更容易定位误报来源。
+
+## 2026-05-29 Task 10 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 10
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 Task9 的同模块 worktree 中补齐 Python 规则的补充来源；对照 `SPEC.md` 中 AST + Semgrep 组合策略，实现最小版 Semgrep JSON 结果到 `IssueHit` 的适配层。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_semgrep_runner.py::test_parse_semgrep_output_returns_issue_hits -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.semgrep_runner'`；补齐 `app/rules/semgrep_runner.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py` 共 10 项通过。
+- **人工干预**：用户明确要求 Task10 继续留在 Task9 的当前分支中完成。
+- **学到的教训**：把 Semgrep 适配层先收敛成纯 payload → `IssueHit` 转换函数，可以在不引入真实子进程调用的前提下先把结构和数据契约稳定住。
