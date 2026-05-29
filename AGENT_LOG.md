@@ -56,3 +56,12 @@
 - **人工干预**：用户明确确认 Task 4 继续留在 Task 3 的同一 worktree 中完成；Task 5 再开新 worktree。
 - **学到的教训**：同一模块内紧邻任务共享同一个 worktree 更符合“一个模块一个 worktree”的边界，也减少重复继承基线的成本。
 
+## 2026-05-29 Task 5 启动与 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 5
+- **触发的 Superpowers 技能**：`using-git-worktrees`、`test-driven-development`
+- **关键 prompt / context 配置**：在用户完成 Task3-4 的 PR merge 后，以最新远程 `main-agent` 作为权威基线创建 `task5-schema-validation` worktree；对照 `SPEC.md` 中 JSON Schema、allowed file、正整数行号与恶意输入防御要求，实现最小版 LLM payload 校验。
+- **工作区 / 分支**：`D:\course\2026_spring\AI4SE\project\.claude\worktrees\task5-schema-validation` / `worktree-task5-schema-validation`
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.schema'`；补齐 `app/review/schema.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py` 共 5 项通过。
+- **人工干预**：用户明确说明后续 `PLAN.md` 由其自行维护，因此从 Task 5 起只更新 `AGENT_LOG.md`，不再改写 `PLAN.md`。
+- **学到的教训**：当用户收回 `PLAN.md` 维护权后，进度与偏差说明都必须集中沉淀到 `AGENT_LOG.md`，否则过程证据会断档。
