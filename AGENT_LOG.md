@@ -74,3 +74,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rendering.py::test_render_inline_comment_wraps_suggestion_block -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.rendering'`；补齐 `app/review/rendering.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py` 共 6 项通过。
 - **人工干预**：无额外人工改写；延续用户关于“Task5-Task8 先共用同一 worktree”的边界设定继续推进。
 - **学到的教训**：在基础接口阶段，先用单一明确断言把 suggestion 渲染 contract 钉住，比一开始就扩展 summary/render_mode 全量行为更稳妥。
+
+## 2026-05-29 Task 7 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 7
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在同一基础接口 worktree 中补齐规则层最小入口；先实现可插拔 analyzer protocol 与 registry，保证后续通用 diff 规则和 Python 规则都能通过同一 `run_analyzers` 收敛输出 `IssueHit`。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_registry.py::test_run_analyzers_collects_hits_from_all_plugins -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules'`；补齐 `app/rules/base.py` 与 `app/rules/registry.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py` 共 7 项通过。
+- **人工干预**：无额外人工改写；继续遵循“Task5-Task8 共用 task5 worktree”的用户边界。
+- **学到的教训**：先把规则层的聚合接口固定下来，再往里面塞具体 analyzer，会比先写具体规则再回头抽象 registry 更省返工。
