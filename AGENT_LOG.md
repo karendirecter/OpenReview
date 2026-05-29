@@ -111,3 +111,13 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_semgrep_runner.py::test_parse_semgrep_output_returns_issue_hits -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.semgrep_runner'`；补齐 `app/rules/semgrep_runner.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py` 共 10 项通过。
 - **人工干预**：用户明确要求 Task10 继续留在 Task9 的当前分支中完成。
 - **学到的教训**：把 Semgrep 适配层先收敛成纯 payload → `IssueHit` 转换函数，可以在不引入真实子进程调用的前提下先把结构和数据契约稳定住。
+
+## 2026-05-29 Task 11 启动与 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 11
+- **触发的 Superpowers 技能**：`using-git-worktrees`、`test-driven-development`
+- **关键 prompt / context 配置**：在用户完成 Task9-10 的 PR merge 且确认 `PLAN.md` 已更新到 `main-agent` 后，基于最新主线新建 `task11-llm-client` worktree；对照 `SPEC.md` 中 LLM client 抽象与 OpenAI-compatible DeepSeek 配置要求，实现最小版 `LLMClient` protocol 与请求构造函数。
+- **工作区 / 分支**：`D:\course\2026_spring\AI4SE\project\.claude\worktrees\task11-llm-client` / `worktree-task11-llm-client`
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_llm_client.py::test_build_review_request_targets_configured_model -v` 稳定报 `ModuleNotFoundError: No module named 'app.llm'`；补齐 `app/llm/base.py` 与 `app/llm/openai_compatible.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py`、`tests/unit/test_llm_client.py` 共 11 项通过。
+- **人工干预**：用户明确要求新开 Task11 分支，并强调要继承已更新到 `main-agent` 的 `PLAN.md`；同时继续保持 `PLAN.md` 由用户自行维护。
+- **学到的教训**：当计划文档由用户手工维护时，新的 worktree 不应再从旧分支继承 PLAN 变更，而必须直接从最新主线读取，否则很容易在接口约束上读到过期内容。
