@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.review.models import ReviewFinding
 
@@ -21,8 +21,15 @@ class RawFinding(BaseModel):
 def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_sha: str) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
 
-    for item in payload.get("findings", []):
-        raw = RawFinding.model_validate(item)
+    raw_findings = payload.get("findings", [])
+    if not isinstance(raw_findings, list):
+        return findings
+
+    for item in raw_findings:
+        try:
+            raw = RawFinding.model_validate(item)
+        except ValidationError:
+            continue
         if raw.file_path not in allowed_files:
             continue
         if raw.line_number <= 0:

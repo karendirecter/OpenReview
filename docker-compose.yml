@@ -3,6 +3,9 @@ services:
     build: .
     container_name: github-pr-auto-review
     restart: unless-stopped
+    dns:
+      - "8.8.8.8"
+      - "1.1.1.1"
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:

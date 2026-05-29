@@ -25,7 +25,7 @@ class GeneralDiffAnalyzer:
             added_or_context = not line.startswith("\\")
             if line.startswith("+") and not line.startswith("+++"):
                 content = line[1:]
-                if "except Exception:" in content:
+                if "except Exception:" in content or content.strip() == "except:":
                     swallow_start = current_line
                 elif swallow_start is not None and content.strip() == "pass":
                     return [
