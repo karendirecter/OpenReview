@@ -562,7 +562,7 @@ def select_review_context(diff_hunks: list[str], file_content: str, use_full_fil
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/context_loader.py tests/unit/test_context_loader.py tests/integration/fixtures/sample_python_file.py
@@ -575,7 +575,7 @@ git commit -m "feat: add review context loader"
 - Create: `app/review/schema.py`
 - Test: `tests/unit/test_schema_validation.py`
 
-- [ ] **Step 1: Write the failing schema validation test**
+- [x] **Step 1: Write the failing schema validation test**
 
 ```python
 from app.review.schema import validate_llm_payload
@@ -607,12 +607,12 @@ def test_validate_llm_payload_rejects_unknown_file_path():
     assert findings == []
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v`
 Expected: FAIL with missing `validate_llm_payload`
 
-- [ ] **Step 3: Write minimal schema validation implementation**
+- [x] **Step 3: Write minimal schema validation implementation**
 
 ```python
 from pydantic import BaseModel
@@ -664,12 +664,12 @@ def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_s
     return findings
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_schema_validation.py::test_validate_llm_payload_rejects_unknown_file_path -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/review/schema.py tests/unit/test_schema_validation.py
