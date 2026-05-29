@@ -1,4 +1,55 @@
 # AGENT_LOG.md
+# 
+## 2026-05-29 Task 18 detail：真实 DeepSeek 审查联通与兼容性补强
+#
+- **时间戳与 task 编号**：2026-05-29 / Task 18 detail
+- **触发的 Superpowers 技能**：`test-driven-development`、`systematic-debugging`
+- **关键 prompt / context 配置**：用户要求继续补静态审查规则，并把真实 GitHub App + DeepSeek 审查链路打通；重点不是“评论能发出去”，而是要让真实 PR 暴露出的错误能被模型发现并稳定回贴。
+- **真实联通验证**：
+  - 使用宿主机 Python 环境对安装仓库 `karendirecter/notion-lite` 的 PR `#2` 多次重放 `/review`
+  - GitHub API 访问在当前宿主机上存在证书校验问题，诊断阶段临时使用 `GithubIntegration(..., verify=False)` 完成真实调用
+  - DeepSeek / OpenAI-compatible 接口同样临时通过 `httpx.Client(verify=False)` 完成联通诊断
+- **新增代码改动**：
+  - `app/llm/openai_compatible.py`
+    - 当模型拒绝 `response_format={"type":"json_object"}` 时，自动重试不带 `response_format` 的 JSON 调用
+  - `app/review/schema.py`
+    - `validate_llm_payload(...)` 改为逐条容错，非法 finding 不再拖垮整个 Stage 2
+  - `app/review/orchestrator.py`
+    - 新增字符串 finding 的兜底转换逻辑
+    - 当 LLM 返回 `findings: [string, ...]` 这类半结构化结果时，按当前候选文件与行号补全为可回贴的 `ReviewFinding`
+- **测试补充**：
+  - `tests/unit/test_llm_client.py`：覆盖 `json_object` 不支持时的自动回退
+  - `tests/unit/test_schema_validation.py`：覆盖“非法条目跳过、合法 finding 保留”
+  - `tests/unit/test_orchestrator.py`：覆盖字符串 finding 被兜底转换
+  - `tests/integration/test_github_review_service.py`：覆盖字符串 finding 场景下的真实回贴路径
+- **验证结果**：
+  - `uv run pytest -q` 全量通过，结果为 `39 passed in 0.85s`
+  - 对真实 PR `#2` 的最终一次重放结果：
+    - issue comment 从 `4` 增至 `5`
+    - review inline comment 从 `0` 增至 `3`
+    - 顶层总结回贴为 `Final findings: 3`
+    - 其中至少 1 条真实指出了 `update_page_blocks` 在 `page is None` 时会触发 `AttributeError`
+- **学到的教训**：
+  - OpenAI-compatible 并不等于所有模型都支持 `response_format={"type":"json_object"}`
+  - 真实 LLM 输出经常只“半结构化”，工程上必须补上“字段可推断则补全”和“单条坏 finding 不拖垮整次审查”的兜底
+  - 用真实 PR 做回放验证，比只看本地假数据更容易暴露 prompt 契约和 schema 假设的问题
+## 2026-05-29 Task 18 detail: static rules expansion and LLM fallback
+#
+- **时间戳与 task 编号**：2026-05-29 / Task 18 detail
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：根据用户反馈，优先补齐两类关键缺口：一是扩展 Python 静态规则覆盖 `None` 风险和缺失 `await`；二是让 `/review` 命令在 Stage 1 零命中时仍触发 DeepSeek/OpenAI-compatible Stage 2 审阅，而不是直接误报“检查通过”。
+- **代码改动**：
+- `app/rules/python_ast.py`：新增 `python.none-dereference` 与 `python.missing-await` 两类 AST 启发式规则，同时保留原有 `python.async-blocking-io`。
+- `app/review/orchestrator.py`：新增 `build_llm_fallback_hits(...)`，使 `trigger_type == "command"` 时即便 Stage 1 无命中，也会为每个改动文件构造 fallback 候选并进入 `run_stage_two(...)`。
+- `tests/unit/test_rules_python_ast.py`：新增 `dict.get(...)` 后属性访问和 async 函数缺失 `await` 的回归测试。
+- `tests/unit/test_orchestrator.py`：新增 `/review` 零命中时仍调用 LLM 的回归测试。
+- `tests/integration/test_github_review_service.py`：新增 GitHub review service 在 Stage 1 无命中时依然调用 LLM 并回贴结果的集成测试。
+- **验证结果**：
+- `uv run pytest tests/unit/test_rules_python_ast.py -q` 通过
+- `uv run pytest tests/unit/test_orchestrator.py -q` 通过
+- `uv run pytest tests/integration/test_github_review_service.py -q` 通过
+- `uv run pytest -q` 全量通过，结果为 `25 passed in 0.66s`
+- **学到的教训**：如果 `/review` 的 Stage 2 调用严格依赖 Stage 1 命中，系统很容易把“静态规则覆盖不到的明显错误”错误地渲染成“检查通过”；命令触发模式必须保留 LLM fallback，才能符合用户对“显式请求完整审查”的预期。
 
 ## 2026-05-29 Task 1 启动
 

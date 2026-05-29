@@ -33,3 +33,13 @@ def test_general_diff_analyzer_flags_broad_exception_pass():
     )
 
     assert hits[0].rule_id == "diff.exception-swallow"
+
+
+def test_general_diff_analyzer_flags_bare_except_pass():
+    analyzer = GeneralDiffAnalyzer(commit_sha="head123")
+    hits = analyzer.analyze(
+        file_path="app/service.py",
+        diff="@@ -8,0 +9,2 @@\n+except:\n+    pass",
+    )
+
+    assert hits[0].rule_id == "diff.exception-swallow"
