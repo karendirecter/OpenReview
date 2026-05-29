@@ -118,7 +118,7 @@ Expected: The application and test directories exist before any file-writing ste
 - Create: `tests/integration/__init__.py`
 - Test: `tests/unit/test_config.py`
 
-- [ ] **Step 1: Create package markers and the failing settings test**
+- [x] **Step 1: Create package markers and the failing settings test**
 
 Run: `mkdir -p tests/unit tests/integration`
 Expected: The test package directories exist.
@@ -160,12 +160,9 @@ def test_settings_load_required_review_defaults():
     assert settings.llm_model == "deepseek-v4-flash-260425"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_config.py::test_settings_load_required_review_defaults -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'app'` or missing `Settings`.
-
-- [ ] **Step 3: Write minimal project bootstrap and settings implementation**
+- [x] **Step 3: Write minimal project bootstrap and settings implementation**
 
 `.gitignore`
 ```gitignore
@@ -265,10 +262,7 @@ Environment variable notes:
 - `GITHUB_TRIGGER_MODE=comment` means `/review` is the default trigger path.
 - `ENABLE_PULL_REQUEST_AUTO_REVIEW=false` keeps automatic PR-triggered review disabled in the MVP.
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `uv run pytest tests/unit/test_config.py::test_settings_load_required_review_defaults -v`
-Expected: PASS.
+- [x] **Step 4: Run test to verify it passes**
 
 - [ ] **Step 5: Commit**
 
@@ -284,7 +278,7 @@ git commit -m "feat: bootstrap app settings"
 - Create: `app/review/models.py`
 - Test: `tests/unit/test_models.py`
 
-- [ ] **Step 1: Write the failing domain model test**
+- [x] **Step 1: Write the failing domain model test**
 
 `tests/unit/test_models.py`
 ```python
@@ -352,12 +346,9 @@ def test_review_task_binds_review_commit_sha():
     assert task.review_commit_sha == hit.commit_sha == result.review_commit_sha == comment.commit_sha
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_models.py::test_review_task_binds_review_commit_sha -v`
-Expected: FAIL with missing review domain models.
-
-- [ ] **Step 3: Write the complete review domain model module**
+- [x] **Step 3: Write the complete review domain model module**
 
 `app/review/__init__.py`
 ```python
@@ -440,10 +431,7 @@ class RenderedComment(BaseModel):
     commit_sha: str
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `uv run pytest tests/unit/test_models.py::test_review_task_binds_review_commit_sha -v`
-Expected: PASS.
+- [x] **Step 4: Run test to verify it passes**
 
 - [ ] **Step 5: Commit**
 
