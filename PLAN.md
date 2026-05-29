@@ -278,7 +278,7 @@ git commit -m "feat: bootstrap app settings"
 - Create: `app/review/models.py`
 - Test: `tests/unit/test_models.py`
 
-- [ ] **Step 1: Write the failing domain model test**
+- [x] **Step 1: Write the failing domain model test**
 
 `tests/unit/test_models.py`
 ```python
@@ -346,12 +346,9 @@ def test_review_task_binds_review_commit_sha():
     assert task.review_commit_sha == hit.commit_sha == result.review_commit_sha == comment.commit_sha
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/unit/test_models.py::test_review_task_binds_review_commit_sha -v`
-Expected: FAIL with missing review domain models.
-
-- [ ] **Step 3: Write the complete review domain model module**
+- [x] **Step 3: Write the complete review domain model module**
 
 `app/review/__init__.py`
 ```python
@@ -434,10 +431,7 @@ class RenderedComment(BaseModel):
     commit_sha: str
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `uv run pytest tests/unit/test_models.py::test_review_task_binds_review_commit_sha -v`
-Expected: PASS.
+- [x] **Step 4: Run test to verify it passes**
 
 - [ ] **Step 5: Commit**
 
