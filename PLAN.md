@@ -433,7 +433,13 @@ class RenderedComment(BaseModel):
 
 - [x] **Step 4: Run test to verify it passes**
 
+
 - [x] **Step 5: Commit**
+
+```bash
+git add app/review/__init__.py app/review/models.py tests/unit/test_models.py
+git commit -m "feat: add review domain models"
+```
 
 ### Task 3: Parse diff hunks and map review positions
 

@@ -55,3 +55,4 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_context_loader.py::test_select_review_context_falls_back_to_full_file_when_needed -v` 稳定报 `ModuleNotFoundError: No module named 'app.review.context_loader'`；补齐 `app/review/context_loader.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py` 共 4 项通过。
 - **人工干预**：用户明确确认 Task 4 继续留在 Task 3 的同一 worktree 中完成；Task 5 再开新 worktree。
 - **学到的教训**：同一模块内紧邻任务共享同一个 worktree 更符合“一个模块一个 worktree”的边界，也减少重复继承基线的成本。
+
