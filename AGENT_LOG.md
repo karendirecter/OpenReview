@@ -83,3 +83,12 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_registry.py::test_run_analyzers_collects_hits_from_all_plugins -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules'`；补齐 `app/rules/base.py` 与 `app/rules/registry.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py` 共 7 项通过。
 - **人工干预**：无额外人工改写；继续遵循“Task5-Task8 共用 task5 worktree”的用户边界。
 - **学到的教训**：先把规则层的聚合接口固定下来，再往里面塞具体 analyzer，会比先写具体规则再回头抽象 registry 更省返工。
+
+## 2026-05-29 Task 8 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 8
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在基础接口 worktree 中补齐通用 diff 规则；对照 `SPEC.md` 中“通用 Diff 审查”与 `IssueHit` 输出约定，先用 `except Exception: pass` 这一类高风险吞异常模式钉住最小启发式 analyzer。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_registry.py::test_general_diff_analyzer_flags_broad_exception_pass -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.diff_general'`；补齐 `app/rules/diff_general.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py` 共 8 项通过。
+- **人工干预**：无额外人工改写；继续沿用用户确认的 Task5-Task8 共享 worktree 边界。
+- **学到的教训**：先用一个高置信、可解释的通用 diff 模式建立 analyzer 结构，比一开始追求覆盖很多弱规则更利于后续扩展和调试。
