@@ -92,3 +92,22 @@
 - **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_registry.py::test_general_diff_analyzer_flags_broad_exception_pass -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.diff_general'`；补齐 `app/rules/diff_general.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py` 共 8 项通过。
 - **人工干预**：无额外人工改写；继续沿用用户确认的 Task5-Task8 共享 worktree 边界。
 - **学到的教训**：先用一个高置信、可解释的通用 diff 模式建立 analyzer 结构，比一开始追求覆盖很多弱规则更利于后续扩展和调试。
+
+## 2026-05-29 Task 9 启动与 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 9
+- **触发的 Superpowers 技能**：`using-git-worktrees`、`test-driven-development`
+- **关键 prompt / context 配置**：在用户完成 Task5-8 的 PR merge 后，基于最新 `main-agent` 新建 `task9-python-ast-analyzer` worktree；对照 `SPEC.md` 中 Python 深度分析要求，先实现 `async def` 中 `time.sleep` 的阻塞 I/O 检测，作为 AST analyzer 的最小切入点。
+- **工作区 / 分支**：`D:\course\2026_spring\AI4SE\project\.claude\worktrees\task9-python-ast-analyzer` / `worktree-task9-python-ast-analyzer`
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_python_ast.py::test_python_ast_analyzer_flags_blocking_sleep_in_async_function -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.python_ast'`；补齐 `app/rules/python_ast.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py` 共 9 项通过。
+- **人工干预**：用户明确要求 Task9 进入新的独立 worktree；如与旧模块有冲突，以已 merge 的远程 `main-agent` 为准。
+- **学到的教训**：在 Python AST 规则层，先用单一高置信的阻塞调用模式验证 AST 遍历框架，再逐步扩展 None access 与 await 相关规则，会更容易定位误报来源。
+
+## 2026-05-29 Task 10 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 10
+- **触发的 Superpowers 技能**：`test-driven-development`
+- **关键 prompt / context 配置**：继续在 Task9 的同模块 worktree 中补齐 Python 规则的补充来源；对照 `SPEC.md` 中 AST + Semgrep 组合策略，实现最小版 Semgrep JSON 结果到 `IssueHit` 的适配层。
+- **subagent 输出的关键片段或链接**：红灯验证命令 `uv run pytest tests/unit/test_rules_semgrep_runner.py::test_parse_semgrep_output_returns_issue_hits -v` 稳定报 `ModuleNotFoundError: No module named 'app.rules.semgrep_runner'`；补齐 `app/rules/semgrep_runner.py` 后，`tests/unit/test_config.py`、`tests/unit/test_models.py`、`tests/unit/test_diff_parser.py`、`tests/unit/test_context_loader.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_rendering.py`、`tests/unit/test_rules_registry.py`、`tests/unit/test_rules_python_ast.py`、`tests/unit/test_rules_semgrep_runner.py` 共 10 项通过。
+- **人工干预**：用户明确要求 Task10 继续留在 Task9 的当前分支中完成。
+- **学到的教训**：把 Semgrep 适配层先收敛成纯 payload → `IssueHit` 转换函数，可以在不引入真实子进程调用的前提下先把结构和数据契约稳定住。
