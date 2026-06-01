@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from app.llm.openai_compatible import OpenAICompatibleClient, build_review_request
-from app.prompts.review_prompt import build_review_prompt
+from app.prompts.review_prompt import build_fixer_prompt, build_inspector_prompt, build_review_prompt
 
 
 def test_build_review_request_targets_configured_model():
@@ -36,6 +36,36 @@ def test_build_review_prompt_includes_commit_sha_and_json_contract():
     assert "head123" in prompt
     assert '"findings"' in prompt
     assert "Do not return extra text" in prompt
+    assert "Inspector Agent" in prompt
+
+
+def test_build_fixer_prompt_forbids_unrelated_changes():
+    prompt = build_fixer_prompt(
+        review_commit_sha="head123",
+        file_path="app/api.py",
+        diff_context="+ user.name",
+        inspector_summary="Issue confirmed",
+        issue_title="Possible None dereference",
+        issue_detail="user may be None before attribute access.",
+        fix_intent="Add a guard before user.name is accessed.",
+        original_code_snippet="return user.name",
+    )
+
+    assert "Fixer Agent" in prompt
+    assert "Do not add unrelated imports" in prompt
+
+
+def test_build_inspector_prompt_includes_fix_intent_contract():
+    prompt = build_inspector_prompt(
+        review_commit_sha="head123",
+        file_path="app/api.py",
+        diff_context="+ user.name",
+        candidate_summary="Possible None dereference",
+        evidence="user may be None",
+        original_code_snippet="return user.name",
+    )
+
+    assert "fix_intent" in prompt
 
 
 class FakeCompletions:

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,12 +14,14 @@ class ChangedFile(BaseModel):
 
 
 class ReviewTask(BaseModel):
+    review_run_id: str = ""
     repo_owner: str
     repo_name: str
     pr_number: int
     base_sha: str
     head_sha: str
     review_commit_sha: str
+    selected_model: str | None = None
     trigger_type: Literal["command", "auto"]
     trigger_comment_id: int | None = None
     changed_files: list[ChangedFile] = Field(default_factory=list)
@@ -49,17 +51,31 @@ class ReviewFinding(BaseModel):
     issue_detail: str
     why_it_matters: str
     fix_strategy: str
+    fix_intent: str = ""
     suggested_code: str
     original_code_snippet: str
 
 
+class AgentTrace(BaseModel):
+    agent_role: Literal["inspector", "fixer"]
+    model_name: str
+    prompt_version: str
+    input_payload: dict[str, Any] = Field(default_factory=dict)
+    raw_response: dict[str, Any] | str = Field(default_factory=dict)
+    parsed_output: dict[str, Any] = Field(default_factory=dict)
+    latency_ms: int | None = None
+    token_usage: dict[str, Any] = Field(default_factory=dict)
+
+
 class ReviewResult(BaseModel):
+    review_run_id: str = ""
     review_commit_sha: str
     summary: str
     overall_risk: str
     findings: list[ReviewFinding] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
     render_mode: str
+    agent_traces: list[AgentTrace] = Field(default_factory=list)
 
 
 class RenderedComment(BaseModel):

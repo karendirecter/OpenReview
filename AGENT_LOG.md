@@ -260,3 +260,36 @@
   - 用新实现对该 payload 手动补跑一次完整流程，脚本返回 `review-processed`
   - 回读 PR 评论后确认新增 1 条顶层评论，内容为“未发现高置信正确性缺陷，检查通过。”
   - 当前该 PR 的 review inline comment 数为 0，原因是 Stage 1 未命中候选问题，因此按规格降级为“通过总结”
+## 2026-06-01 Task 19-25 管理员监控器与双 Agent 协作修复
+
+- **时间戳与 task 编号**：2026-06-01 / Task 19-25
+- **触发的 Superpowers 技能**：`test-driven-development`、`systematic-debugging`
+- **关键 prompt / context 配置**：用户反馈 `task19-visualization` 分支上的 GitHub App 在线审查在 GitHub 页面持续提示“LLM 复核没有产出有效结果；本次自动审查已降级”；本地可视化页面只能看到 `inspector` 输出，看不到 `fixer` 输出和 `final findings`；对照 `task18-detail` 可确认旧版本虽然没有管理员监控器与双 agent 拆分，但能稳定在 GitHub 上展示审查结论。
+- **对话中定位出的真实现象**：
+  - 先对比 `task18-detail` 与 `task19-visualization` 的 `app/review/orchestrator.py`、`app/review/schema.py`、GitHub review service 与前端可视化读取逻辑，初步判断不是前端展示缺失，而是后端在 `inspector -> fixer -> final findings` 之间丢失了有效 finding。
+  - 新增回归测试后，先复现了“模型只返回半结构化 finding 对象时，`inspector` trace 会落库，但 schema 校验失败导致 `fixer` 不会启动、最终 findings 为空”的问题。
+  - 用户补充说明已在 `task19` 下执行 `docker compose down` 与 `docker compose up -d --build` 但现象不变；随后直接校验本地源码与镜像内 `/app/app/review/orchestrator.py` 的 SHA256，一致，确认不是“未重启”或“镜像未重建”。
+  - 继续通过容器暴露的 `/api/review-runs` 读取真实运行记录，抓到线上 payload：`inspector` 实际已经返回了完整问题描述，但 `verdict` 被模型写成了 `"reject"`，当前 `task19` 代码会无条件丢弃所有 `reject` finding，导致 `fixer` 根本不运行，最终 GitHub 只发 summary degradation comment。
+- **代码修复**：
+  - `app/review/orchestrator.py`
+    - 为 `inspector` 与 `fixer` 增加对象级兜底恢复逻辑：当 LLM 返回半结构化 finding、缺少 `file_path` / `line_number` / `original_code_snippet` 等锚点字段时，使用当前 `IssueHit` 与 `ChangedFile` 自动补全为可继续处理的 `ReviewFinding`。
+    - 将 `inspector` 的 fallback finding 从“直接返回结果”改为“恢复 finding 后继续驱动 `fixer`”，修复“只有 inspector trace，没有 fixer trace / final findings”的断链。
+    - 为 `llm.full-review-fallback` 场景新增 `should_salvage_rejected_finding(...)`：当模型把明确的问题描述错误标成 `verdict: "reject"` 时，不再无条件丢弃，而是保留为 fallback finding 继续进入 fixer 流程。
+    - 修正 `first_changed_line(...)` 的实现，改为定位 hunk 内第一个真实新增行，而不是直接返回 hunk header 的起始行。
+  - `tests/unit/test_orchestrator.py`
+    - 新增“半结构化 inspector / fixer payload 仍能产出 findings”回归测试。
+    - 新增“fallback 场景下 inspector 错写 `reject` 仍能恢复并驱动 fixer”的回归测试。
+  - `tests/integration/test_github_review_service.py`
+    - 新增真实集成路径测试，覆盖 GitHub review service 在上述两类 payload 下仍能发布 summary 与 inline comment。
+- **管理员监控器相关交付**：
+  - 当前 worktree 同时包含 review run 持久化、agent trace 入库、本地回放 API、模型切换、前端可视化等管理员监控器能力；本次修复保证这些监控界面不再只显示孤立的 `inspector` 原始输出，而能看到完整的 `fixer` 与最终 findings 链路。
+- **验证结果**：
+  - 定向回归：`uv run pytest tests/unit/test_orchestrator.py tests/integration/test_github_review_service.py -q`，先后得到 `11 passed` 与引入真实 `reject` payload 回归后 `13 passed`。
+  - 全量回归：`uv run pytest -q`，修复前一次通过为 `54 passed in 1.38s`，纳入真实线上 `reject` 兼容逻辑后再次通过，结果为 `56 passed in 1.42s`。
+  - 运行时排查：`docker run --rm task19-visualization-review-app ...` 校验镜像内 orchestrator 文件 hash 与工作区源码一致；`docker logs github-pr-auto-review` 与 `/api/review-runs` 返回值共同证明线上异常来自模型返回的 `verdict` 与 fallback 协议错位，而不是容器未更新。
+- **人工干预**：
+  - 用户在排查过程中主动说明已手动执行 `docker compose down` / `docker compose up -d --build`，并要求确认是否是重启问题；据此增加了“镜像内外代码 hash 一致性校验”与“直接读取 review run 落库结果”的取证步骤。
+- **学到的教训**：
+  - 管理员监控器只做展示是不够的，必须能回放真实审查 payload 并看到 agent trace、result payload 与 GitHub comment 之间的闭环，否则很难区分“前端没显示”与“后端根本没产出”。
+  - 双 Agent 协作链路中，`verdict`、`file_path`、`line_number` 等字段一旦被真实模型轻微偏离 contract，就会放大成整条链路中断；编排层必须具备比 schema 层更强的恢复能力。
+  - 对 Docker 形态的线上故障，优先校验镜像内文件 hash 与真实运行 payload，比单纯重复重启容器更快锁定问题边界。

@@ -18,11 +18,20 @@ def build_review_request(model: str, prompt: str, *, use_response_format: bool =
 class OpenAICompatibleClient:
     def __init__(self, *, base_url: str, api_key: str, model: str) -> None:
         self._client = OpenAI(base_url=base_url, api_key=api_key)
+        self._base_url = base_url
+        self._api_key = api_key
         self._model = model
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "OpenAICompatibleClient":
-        return cls(base_url=settings.llm_base_url, api_key=settings.llm_api_key, model=settings.llm_model)
+    def from_settings(cls, settings: Settings, *, model_name: str | None = None) -> "OpenAICompatibleClient":
+        return cls(
+            base_url=settings.llm_base_url,
+            api_key=settings.llm_api_key,
+            model=model_name or settings.llm_model,
+        )
+
+    def with_model(self, model: str) -> "OpenAICompatibleClient":
+        return OpenAICompatibleClient(base_url=self._base_url, api_key=self._api_key, model=model)
 
     def review_findings(self, prompt: str) -> dict:
         try:

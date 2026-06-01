@@ -64,12 +64,135 @@ class FakeLLMClient:
 
     def review_findings(self, prompt: str) -> dict:
         self.prompts.append(prompt)
-        return self.payload
+        if self.payload:
+            return self.payload
+        if "Inspector Agent" in prompt:
+            return {
+                "summary": "Found a correctness issue",
+                "findings": [
+                    {
+                        "file_path": "app/api.py",
+                        "line_number": 4,
+                        "end_line_number": 4,
+                        "risk_level": "high",
+                        "verdict": "confirm",
+                        "issue_title": "Blocking I/O in async route",
+                        "issue_detail": "time.sleep blocks the event loop.",
+                        "why_it_matters": "Requests will stall under load.",
+                        "fix_intent": "Replace blocking call with an awaitable sleep.",
+                        "suggestion_rationale": "Use an async-friendly API.",
+                        "suggested_code": "",
+                        "original_code_snippet": "    time.sleep(1)",
+                        "confidence": 0.95,
+                    }
+                ],
+            }
+        return {
+            "summary": "Generated a fix",
+            "findings": [
+                {
+                    "file_path": "app/api.py",
+                    "line_number": 4,
+                    "end_line_number": 4,
+                    "risk_level": "high",
+                    "verdict": "confirm",
+                    "issue_title": "Blocking I/O in async route",
+                    "issue_detail": "time.sleep blocks the event loop.",
+                    "why_it_matters": "Requests will stall under load.",
+                    "fix_intent": "Replace blocking call with an awaitable sleep.",
+                    "suggestion_rationale": "Use an async-friendly API.",
+                    "suggested_code": "    await asyncio.sleep(1)",
+                    "original_code_snippet": "    time.sleep(1)",
+                    "confidence": 0.95,
+                }
+            ],
+        }
+
+
+class PartialStructuredLLMClient:
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    def review_findings(self, prompt: str) -> dict:
+        self.prompts.append(prompt)
+        if "Inspector Agent" in prompt:
+            return {
+                "summary": "Found a correctness issue",
+                "findings": [
+                    {
+                        "issue_title": "Blocking I/O in async route",
+                        "issue_detail": "time.sleep blocks the event loop.",
+                        "why_it_matters": "Requests will stall under load.",
+                        "fix_intent": "Replace blocking call with an awaitable sleep.",
+                        "suggestion_rationale": "Use an async-friendly API.",
+                        "confidence": 0.95,
+                    }
+                ],
+            }
+
+        return {
+            "summary": "Generated a fix",
+            "findings": [
+                {
+                    "issue_title": "Blocking I/O in async route",
+                    "issue_detail": "time.sleep blocks the event loop.",
+                    "why_it_matters": "Requests will stall under load.",
+                    "fix_intent": "Replace blocking call with an awaitable sleep.",
+                    "suggestion_rationale": "Use an async-friendly API.",
+                    "suggested_code": "    await asyncio.sleep(1)",
+                    "confidence": 0.95,
+                }
+            ],
+        }
+
+
+class FallbackRejectingLLMClient:
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    def review_findings(self, prompt: str) -> dict:
+        self.prompts.append(prompt)
+        if "Inspector Agent" in prompt:
+            return {
+                "summary": "Found one critical bug.",
+                "findings": [
+                    {
+                        "file_path": "app/service.py",
+                        "line_number": 2,
+                        "end_line_number": 2,
+                        "risk_level": "high",
+                        "verdict": "reject",
+                        "issue_title": "Missing None check for get_page_by_id return value",
+                        "issue_detail": "The code dereferences a possible None return value.",
+                        "why_it_matters": "This raises AttributeError at runtime.",
+                        "fix_intent": "Add a guard for the missing page case.",
+                        "suggestion_rationale": "Prevent the crash and return a graceful error.",
+                        "suggested_code": "",
+                        "original_code_snippet": "return value.id",
+                        "confidence": "high",
+                    }
+                ],
+            }
+
+        return {
+            "summary": "Generated a fix",
+            "findings": [
+                {
+                    "issue_title": "Missing None check for get_page_by_id return value",
+                    "issue_detail": "The code dereferences a possible None return value.",
+                    "why_it_matters": "This raises AttributeError at runtime.",
+                    "fix_intent": "Add a guard for the missing page case.",
+                    "suggestion_rationale": "Prevent the crash and return a graceful error.",
+                    "suggested_code": "if value is None:\n    return 0\nreturn value.id",
+                    "confidence": 0.95,
+                }
+            ],
+        }
 
 
 def test_process_issue_comment_posts_summary_and_inline_comments():
-    source = "import time\n\nasync def endpoint():\n    time.sleep(1)\n"
-    patch = "@@ -1,3 +1,4 @@\n import time\n \n async def endpoint():\n+    time.sleep(1)\n"
+    source = "import asyncio\nimport time\n\nasync def endpoint():\n    time.sleep(1)\n"
+    patch = "@@ -2,3 +2,4 @@\n import time\n \n async def endpoint():\n+    time.sleep(1)\n"
     pr = FakePullRequest(
         number=7,
         files=[FakePullFile(filename="app/api.py", patch=patch)],
@@ -97,15 +220,15 @@ def test_process_issue_comment_posts_summary_and_inline_comments():
     )
 
     assert len(pr.issue_comments) == 1
-    assert "自动代码评审结果" in pr.issue_comments[0]
+    assert "自动代码审查结果" in pr.issue_comments[0]
     assert len(pr.inline_comments) == 1
     assert pr.inline_comments[0]["path"] == "app/api.py"
     assert pr.inline_comments[0]["line"] == 4
 
 
 def test_process_issue_comment_uses_llm_when_stage1_has_no_hits():
-    source = "def run(value):\n    return value\n"
-    patch = "@@ -1,1 +1,2 @@\n-return old\n+return value\n"
+    source = "def run(value):\n    return value.id\n"
+    patch = "@@ -1,1 +1,2 @@\n-return old\n+return value.id\n"
     pr = FakePullRequest(
         number=8,
         files=[FakePullFile(filename="app/service.py", patch=patch)],
@@ -126,9 +249,10 @@ def test_process_issue_comment_uses_llm_when_stage1_has_no_hits():
                     "issue_title": "Missing fallback",
                     "issue_detail": "Returning raw value can fail.",
                     "why_it_matters": "The code raises when value is None.",
+                    "fix_intent": "Guard before dereference.",
                     "suggestion_rationale": "Guard the return.",
-                    "suggested_code": "return value or 0",
-                    "original_code_snippet": "return value",
+                    "suggested_code": "if value is None:\n    return 0\nreturn value.id",
+                    "original_code_snippet": "return value.id",
                     "confidence": 0.95,
                 }
             ],
@@ -153,7 +277,7 @@ def test_process_issue_comment_uses_llm_when_stage1_has_no_hits():
         }
     )
 
-    assert len(llm_client.prompts) == 1
+    assert len(llm_client.prompts) == 2
     assert len(pr.issue_comments) == 1
     assert "Missing fallback" in pr.issue_comments[0]
     assert len(pr.inline_comments) == 1
@@ -233,5 +357,79 @@ def test_process_issue_comment_salvages_string_findings_from_llm_payload():
 
     assert len(pr.issue_comments) == 1
     assert "value is dereferenced" in pr.issue_comments[0]
+    assert len(pr.inline_comments) == 1
+    assert pr.inline_comments[0]["path"] == "app/service.py"
+
+
+def test_process_issue_comment_salvages_partial_structured_findings():
+    source = "import asyncio\nimport time\n\nasync def endpoint():\n    time.sleep(1)\n"
+    patch = "@@ -2,3 +2,4 @@\n import time\n \n async def endpoint():\n+    time.sleep(1)\n"
+    pr = FakePullRequest(
+        number=11,
+        files=[FakePullFile(filename="app/api.py", patch=patch)],
+        file_contents={"app/api.py": source},
+    )
+    repo = FakeRepo(pr, {"app/api.py": source})
+    github = FakeGithub(repo)
+    llm_client = PartialStructuredLLMClient()
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+    )
+    service = GitHubReviewService(settings=settings, github_client_factory=lambda: github, llm_client=llm_client)
+
+    service.process_issue_comment(
+        {
+            "action": "created",
+            "comment": {"id": 13, "body": "/review"},
+            "issue": {"number": 11, "pull_request": {"url": "https://api.github.com/repos/octo/demo/pulls/11"}},
+            "repository": {"name": "demo", "full_name": "octo/demo", "owner": {"login": "octo"}},
+        }
+    )
+
+    assert len(llm_client.prompts) == 2
+    assert len(pr.issue_comments) == 1
+    assert "Blocking I/O in async route" in pr.issue_comments[0]
+    assert len(pr.inline_comments) == 1
+    assert pr.inline_comments[0]["path"] == "app/api.py"
+
+
+def test_process_issue_comment_salvages_rejected_fallback_findings():
+    source = "def run(value):\n    return value.id\n"
+    patch = "@@ -1,1 +1,2 @@\n-return old\n+return value.id\n"
+    pr = FakePullRequest(
+        number=12,
+        files=[FakePullFile(filename="app/service.py", patch=patch)],
+        file_contents={"app/service.py": source},
+    )
+    repo = FakeRepo(pr, {"app/service.py": source})
+    github = FakeGithub(repo)
+    llm_client = FallbackRejectingLLMClient()
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+    )
+    service = GitHubReviewService(settings=settings, github_client_factory=lambda: github, llm_client=llm_client)
+
+    service.process_issue_comment(
+        {
+            "action": "created",
+            "comment": {"id": 14, "body": "/review"},
+            "issue": {"number": 12, "pull_request": {"url": "https://api.github.com/repos/octo/demo/pulls/12"}},
+            "repository": {"name": "demo", "full_name": "octo/demo", "owner": {"login": "octo"}},
+        }
+    )
+
+    assert len(llm_client.prompts) == 2
+    assert len(pr.issue_comments) == 1
+    assert "Missing None check for get_page_by_id return value" in pr.issue_comments[0]
     assert len(pr.inline_comments) == 1
     assert pr.inline_comments[0]["path"] == "app/service.py"

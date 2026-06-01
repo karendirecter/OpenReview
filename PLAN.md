@@ -1502,7 +1502,7 @@ services:
 Run: `docker build -t github-pr-auto-review . && docker compose up --build`
 Expected: image builds successfully and FastAPI starts on port 8000
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Dockerfile docker-compose.yml .env.example
@@ -1515,22 +1515,22 @@ git commit -m "feat: add container packaging"
 - Modify: `PLAN.md`
 - Modify: `AGENT_LOG.md`
 
-- [ ] **Step 1: Run the unit test suite**
+- [x] **Step 1: Run the unit test suite**
 
 Run: `uv run pytest tests/unit -v`
 Expected: PASS
 
-- [ ] **Step 2: Run the integration test suite**
+- [x] **Step 2: Run the integration test suite**
 
 Run: `uv run pytest tests/integration -v`
 Expected: PASS
 
-- [ ] **Step 3: Run the full test suite**
+- [x] **Step 3: Run the full test suite**
 
 Run: `uv run pytest -v`
 Expected: PASS
 
-- [ ] **Step 4: Update project tracking files**
+- [x] **Step 4: Update project tracking files**
 
 `PLAN.md`
 ```markdown
@@ -1542,11 +1542,372 @@ Expected: PASS
 - 2026-05-27 — Task N — superpowers:test-driven-development — Added <feature>; manual intervention: <reason>
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add PLAN.md AGENT_LOG.md
 git commit -m "docs: update project plan tracking"
+```
+
+### Task 19: Add review run persistence and history query backbone
+
+**Files:**
+- Create: `app/persistence/__init__.py`
+- Create: `app/persistence/models.py`
+- Create: `app/persistence/repository.py`
+- Modify: `app/config.py`
+- Test: `tests/unit/test_review_run_repository.py`
+
+- [x] **Step 1: Write the failing persistence repository tests**
+
+```python
+from app.persistence.models import ReviewRunCreate
+from app.persistence.repository import ReviewRunRepository
+
+
+def test_repository_can_save_and_list_review_runs(tmp_path):
+    repo = ReviewRunRepository.for_sqlite(tmp_path / "review_runs.db")
+
+    created = repo.create_run(
+        ReviewRunCreate(
+            review_run_id="run-1",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=9,
+            review_commit_sha="abc123",
+            trigger_type="command",
+            selected_model="deepseek-v4-flash-260425",
+            base_url="https://ark.cn-beijing.volces.com/api/v3/",
+        )
+    )
+
+    listed = repo.list_runs(limit=10)
+
+    assert created.review_run_id == "run-1"
+    assert listed[0].selected_model == "deepseek-v4-flash-260425"
+```
+
+- [x] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest tests/unit/test_review_run_repository.py -v`
+Expected: FAIL with missing persistence module
+
+- [x] **Step 3: Implement the minimal persistence layer**
+
+```python
+class ReviewRunRepository:
+    @classmethod
+    def for_sqlite(cls, db_path: Path) -> "ReviewRunRepository":
+        ...
+
+    def create_run(self, payload: ReviewRunCreate) -> ReviewRunRecord:
+        ...
+
+    def list_runs(self, limit: int = 20) -> list[ReviewRunRecord]:
+        ...
+```
+
+- [x] **Step 4: Run test to verify it passes**
+
+Run: `uv run pytest tests/unit/test_review_run_repository.py -v`
+Expected: PASS
+
+### Task 20: Split Stage 2 into inspector and fixer agents
+
+**Files:**
+- Modify: `app/prompts/review_prompt.py`
+- Modify: `app/review/orchestrator.py`
+- Modify: `app/review/models.py`
+- Modify: `app/review/schema.py`
+- Test: `tests/unit/test_dual_agent_prompt.py`
+- Test: `tests/unit/test_orchestrator.py`
+
+- [x] **Step 1: Write the failing dual-agent orchestration tests**
+
+```python
+from app.review.orchestrator import run_stage2_agents
+
+
+def test_run_stage2_agents_passes_inspector_output_to_fixer(fake_llm_client, sample_review_task, sample_issue_hit):
+    result = run_stage2_agents(
+        llm_client=fake_llm_client,
+        task=sample_review_task,
+        issue_hits=[sample_issue_hit],
+    )
+
+    assert result.findings[0].issue_title == "Possible None dereference"
+    assert result.findings[0].suggested_code.startswith("if user is None:")
+```
+
+- [x] **Step 2: Run tests to verify they fail**
+
+Run: `uv run pytest tests/unit/test_dual_agent_prompt.py tests/unit/test_orchestrator.py -v`
+Expected: FAIL with missing dual-agent flow
+
+- [x] **Step 3: Implement dual-agent prompt contracts and orchestration**
+
+```python
+def build_inspector_prompt(...) -> PromptPayload:
+    ...
+
+
+def build_fixer_prompt(...) -> PromptPayload:
+    ...
+
+
+def run_stage2_agents(...) -> Stage2AgentResult:
+    ...
+```
+
+- [x] **Step 4: Run tests to verify they pass**
+
+Run: `uv run pytest tests/unit/test_dual_agent_prompt.py tests/unit/test_orchestrator.py -v`
+Expected: PASS
+
+### Task 21: Persist agent traces and expose review history APIs
+
+**Files:**
+- Create: `app/visualization/__init__.py`
+- Create: `app/visualization/router.py`
+- Create: `app/visualization/service.py`
+- Modify: `app/main.py`
+- Modify: `app/review/orchestrator.py`
+- Test: `tests/integration/test_review_runs_api.py`
+
+- [x] **Step 1: Write the failing history API tests**
+
+```python
+def test_get_review_runs_returns_persisted_history(client, seeded_review_run):
+    response = client.get("/api/review-runs")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["review_run_id"] == seeded_review_run.review_run_id
+
+
+def test_get_review_run_detail_returns_agent_traces(client, seeded_review_run):
+    response = client.get(f"/api/review-runs/{seeded_review_run.review_run_id}")
+
+    assert response.status_code == 200
+    assert "agent_traces" in response.json()
+```
+
+- [x] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest tests/integration/test_review_runs_api.py -v`
+Expected: FAIL with missing API routes
+
+- [x] **Step 3: Implement persistence wiring and API routes**
+
+```python
+@router.get("/api/review-runs")
+def list_review_runs(...) -> ReviewRunListResponse:
+    ...
+
+
+@router.get("/api/review-runs/{review_run_id}")
+def get_review_run_detail(...) -> ReviewRunDetailResponse:
+    ...
+```
+
+- [x] **Step 4: Run test to verify it passes**
+
+Run: `uv run pytest tests/integration/test_review_runs_api.py -v`
+Expected: PASS
+
+### Task 22: Add local replay and controlled model switching
+
+**Files:**
+- Modify: `app/config.py`
+- Modify: `app/llm/openai_compatible.py`
+- Create: `app/visualization/replay_service.py`
+- Modify: `app/visualization/router.py`
+- Test: `tests/unit/test_config.py`
+- Test: `tests/unit/test_replay_service.py`
+
+- [x] **Step 1: Write the failing model whitelist and replay tests**
+
+```python
+from app.visualization.replay_service import replay_review_run
+
+
+def test_allowed_models_are_whitelisted(settings):
+    assert settings.allowed_llm_models == [
+        "deepseek-v4-flash-260425",
+        "doubao-seed-2-0-code-preview-260215",
+        "doubao-seed-1-8-251228",
+    ]
+
+
+def test_replay_review_run_uses_selected_model_without_changing_base_url(fake_repository, fake_llm_client):
+    replayed = replay_review_run(
+        repository=fake_repository,
+        llm_client=fake_llm_client,
+        review_run_id="run-1",
+        model_name="doubao-seed-2-0-code-preview-260215",
+        publish_to_github=False,
+    )
+
+    assert replayed.selected_model == "doubao-seed-2-0-code-preview-260215"
+    assert replayed.base_url == "https://ark.cn-beijing.volces.com/api/v3/"
+```
+
+- [x] **Step 2: Run tests to verify they fail**
+
+Run: `uv run pytest tests/unit/test_config.py tests/unit/test_replay_service.py -v`
+Expected: FAIL with missing replay service or model whitelist
+
+- [x] **Step 3: Implement whitelist-based model switching and replay service**
+
+```python
+class Settings(BaseSettings):
+    allowed_llm_models: list[str] = [...]
+
+
+def replay_review_run(...) -> ReviewRunRecord:
+    ...
+```
+
+- [x] **Step 4: Run tests to verify they pass**
+
+Run: `uv run pytest tests/unit/test_config.py tests/unit/test_replay_service.py -v`
+Expected: PASS
+
+### Task 23: Build the local visualization frontend
+
+**Files:**
+- Create: `frontend/package.json`
+- Create: `frontend/src/main.tsx`
+- Create: `frontend/src/App.tsx`
+- Create: `frontend/src/lib/api.ts`
+- Create: `frontend/src/pages/ReviewRunListPage.tsx`
+- Create: `frontend/src/pages/ReviewRunDetailPage.tsx`
+- Create: `frontend/src/components/DiffViewer.tsx`
+- Create: `frontend/src/components/ModelSwitcher.tsx`
+- Create: `frontend/src/styles.css`
+
+- [x] **Step 1: Write the failing frontend smoke expectations**
+
+```text
+Command to validate after implementation:
+npm install --prefix frontend
+npm run --prefix frontend build
+Expected: frontend builds successfully
+```
+
+- [x] **Step 2: Run frontend build to verify it fails before files exist**
+
+Run: `npm run --prefix frontend build`
+Expected: FAIL with missing frontend package
+
+- [x] **Step 3: Implement the minimal local UI**
+
+```tsx
+export function ReviewRunDetailPage() {
+  return (
+    <>
+      <ModelSwitcher />
+      <DiffViewer />
+      <section data-testid="inspector-output" />
+      <section data-testid="fixer-output" />
+    </>
+  );
+}
+```
+
+- [x] **Step 4: Run frontend build to verify it passes**
+
+Run: `npm run --prefix frontend build`
+Expected: PASS
+
+### Task 24: Add suggestion-quality regression coverage
+
+**Files:**
+- Modify: `tests/integration/fixtures/sample_pr_diff.patch`
+- Create: `tests/integration/fixtures/sample_pr_diff_with_bug.patch`
+- Create: `tests/integration/test_review_replay_flow.py`
+- Modify: `tests/integration/test_review_pipeline.py`
+
+- [x] **Step 1: Write the failing regression test for meaningful suggestions**
+
+```python
+def test_replay_flow_generates_bug_related_suggestion(client, seeded_buggy_review_run):
+    response = client.post(
+        f"/api/review-runs/{seeded_buggy_review_run.review_run_id}/replay",
+        json={"model_name": "deepseek-v4-flash-260425", "publish_to_github": False},
+    )
+
+    assert response.status_code == 200
+    finding = response.json()["findings"][0]
+    assert "None" in finding["issue_title"] or "await" in finding["issue_title"]
+    assert "import logging" not in finding["suggested_code"]
+```
+
+- [x] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest tests/integration/test_review_replay_flow.py tests/integration/test_review_pipeline.py -v`
+Expected: FAIL with missing replay quality checks
+
+- [x] **Step 3: Tighten validation to reject irrelevant suggestions**
+
+```python
+def suggestion_matches_confirmed_issue(finding: ReviewFinding) -> bool:
+    ...
+```
+
+- [x] **Step 4: Run test to verify it passes**
+
+Run: `uv run pytest tests/integration/test_review_replay_flow.py tests/integration/test_review_pipeline.py -v`
+Expected: PASS
+
+### Task 25: Document local UI workflow and complete verification
+
+**Files:**
+- Modify: `README.md`
+- Modify: `AGENT_LOG.md`
+- Modify: `PLAN.md`
+
+- [x] **Step 1: Write the documentation completion checklist**
+
+```text
+README must include:
+- backend start command
+- frontend start/build command
+- database path and reset method
+- model switching limitations
+- replay flow usage
+```
+
+- [x] **Step 2: Run the full verification suite**
+
+Run: `uv run pytest -v`
+Expected: PASS
+
+Run: `npm run --prefix frontend build`
+Expected: PASS
+
+- [x] **Step 3: Update tracking files**
+
+`AGENT_LOG.md`
+```markdown
+- 2026-06-01 — Task 19-25 — superpowers:test-driven-development — Added visualization UI, review history persistence, model switching, and dual-agent replay flow; manual intervention: local model credentials supplied via `.env`
+```
+
+`PLAN.md`
+```markdown
+- [x] Task 19 complete (`<commit-hash>`)
+- [x] Task 20 complete (`<commit-hash>`)
+- [x] Task 21 complete (`<commit-hash>`)
+- [x] Task 22 complete (`<commit-hash>`)
+- [x] Task 23 complete (`<commit-hash>`)
+- [x] Task 24 complete (`<commit-hash>`)
+- [x] Task 25 complete (`<commit-hash>`)
+```
+
+- [x] **Step 4: Commit**
+
+```bash
+git add .
+git commit -m "feat: add local review visualization"
 ```
 
 ---
@@ -1562,6 +1923,10 @@ git commit -m "docs: update project plan tracking"
 - Malicious/invalid LLM payload handling: covered by Tasks 5 and 14
 - Containerization: covered by Task 17
 - Plan bookkeeping and verification: covered by Task 18
+- Review history persistence and query APIs: covered by Tasks 19 and 21
+- Dual-agent prompt pipeline and suggestion validation: covered by Tasks 20 and 24
+- Controlled model switching and local replay: covered by Task 22
+- Local visualization frontend: covered by Tasks 23 and 25
 
 ### Placeholder scan
 
@@ -1573,6 +1938,7 @@ git commit -m "docs: update project plan tracking"
 ### Type consistency
 
 - Core types used consistently across tasks: `ReviewTask`, `ChangedFile`, `IssueHit`, `ReviewFinding`
+- New persistence/debugging types are explicit in the plan: `ReviewRun`, `AgentTrace`
 - Review trigger values consistently use `"command"` and `"auto"`
 - Commit binding consistently uses `review_commit_sha`
 
