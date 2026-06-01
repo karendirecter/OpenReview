@@ -1,0 +1,147 @@
+:root {
+  --bg: #f4efe7;
+  --panel: rgba(255, 251, 245, 0.9);
+  --line: rgba(53, 37, 24, 0.12);
+  --text: #2b1d11;
+  --muted: #7a6454;
+  --accent: #bc5428;
+  --accent-soft: #f5d7c6;
+  --shadow: 0 24px 60px rgba(74, 41, 18, 0.12);
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(255, 210, 173, 0.7), transparent 32%),
+    linear-gradient(180deg, #fff9f2 0%, #f1e7da 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+select {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  padding: 0.8rem 1rem;
+}
+
+button {
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+}
+
+.shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.shell__header {
+  margin-bottom: 1.5rem;
+}
+
+.shell__header h1 {
+  margin: 0.4rem 0 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.shell__content,
+.detail-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel__header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 245, 235, 0.6));
+}
+
+.panel__header h2,
+.trace-card h3 {
+  margin: 0;
+}
+
+.run-list,
+.trace-grid {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.run-card,
+.trace-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.run-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  transition: 160ms ease;
+}
+
+.diff-viewer,
+.trace-card pre {
+  margin: 0;
+  padding: 1rem;
+  white-space: pre-wrap;
+  overflow: auto;
+  background: #24170f;
+  color: #fef5eb;
+}
+
+.model-switcher__controls {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.empty-state {
+  padding: 1rem;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 1rem;
+  }
+
+  .model-switcher__controls {
+    flex-direction: column;
+  }
+}

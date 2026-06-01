@@ -23,12 +23,13 @@ def render_inline_comment(finding: ReviewFinding) -> str:
 
 def render_summary_comment(result: ReviewResult) -> str:
     lines = [
-        "## 自动代码评审结果",
+        "## 自动代码审查结果",
         "",
         f"- Commit: `{result.review_commit_sha}`",
         f"- Overall risk: `{result.overall_risk}`",
         f"- Stage 1 candidates: {result.stats.get('stage1_candidates', 0)}",
         f"- Final findings: {result.stats.get('stage2_findings', len(result.findings))}",
+        f"- Agent traces: {result.stats.get('agent_traces', len(result.agent_traces))}",
         "",
         result.summary,
     ]

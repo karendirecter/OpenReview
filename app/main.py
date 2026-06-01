@@ -3,8 +3,11 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from app.config import Settings
 from app.github.service import GitHubReviewService, decode_json_body
 from app.github.webhook import should_trigger_review, verify_webhook_signature
+from app.persistence.repository import ReviewRunRepository
+from app.visualization.router import router as visualization_router
 
 app = FastAPI(title="GitHub PR Auto Review")
+app.include_router(visualization_router)
 
 
 @app.get("/health")
@@ -27,7 +30,14 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks) ->
     if not should_trigger_review(event_name, payload):
         return {"status": "ignored"}
 
-    review_service = getattr(app.state, "review_service", None) or GitHubReviewService(settings)
+    review_repository = getattr(app.state, "review_run_repository", None)
+    if review_repository is None and hasattr(settings, "review_db_path"):
+        review_repository = ReviewRunRepository.for_sqlite(settings.review_db_path)
+    app.state.review_run_repository = review_repository
+    review_service = getattr(app.state, "review_service", None) or GitHubReviewService(
+        settings,
+        review_run_repository=review_repository,
+    )
     app.state.review_service = review_service
     background_tasks.add_task(review_service.process_issue_comment, payload)
     return {"status": "accepted"}

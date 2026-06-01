@@ -7,3 +7,7 @@ htmlcov/
 .claude/settings.local.json
 *.private-key.pem
 *.pem
+.data/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo

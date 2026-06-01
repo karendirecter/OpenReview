@@ -29,7 +29,7 @@ An MVP GitHub App service that listens for `/review` comments on pull requests, 
 
 ```powershell
 git clone <your-repo-url>
-cd <repo>\.claude\worktrees\task18-detail
+cd <repo>\.claude\worktrees\task19-visualization
 copy .env.example .env
 ```
 
@@ -46,6 +46,7 @@ Notes:
 - `GITHUB_PRIVATE_KEY` should be a single-line value with literal `\n`
 - `LLM_BASE_URL` defaults to Volcengine Ark in `.env.example`
 - `LLM_MODEL` defaults to `deepseek-v4-flash-260425`
+- `ALLOWED_LLM_MODELS` can be a comma-separated list if you want to override the default model whitelist
 
 ## 2. Configure The GitHub App
 
@@ -101,6 +102,8 @@ Expected response:
 {"status":"ok"}
 ```
 
+The local review history database is stored at `.data/review_runs.db`.
+
 ## 4. Expose The Webhook Publicly
 
 If you run locally, you still need a public URL for GitHub webhooks. You can use a tunnel such as `localtunnel`, `ngrok`, or another reverse tunnel.
@@ -132,7 +135,29 @@ Expected behavior:
 - the PR receives a summary comment
 - if findings are produced, the PR also receives inline review comments
 
-## 6. Optional Connectivity Checks
+## 6. Local Visualization
+
+Install and start the frontend:
+
+```powershell
+npm install --prefix frontend
+npm run --prefix frontend dev
+```
+
+Build the frontend:
+
+```powershell
+npm run --prefix frontend build
+```
+
+The UI reads:
+
+- `GET /api/review-runs`
+- `GET /api/review-runs/{review_run_id}`
+- `GET /api/models`
+- `POST /api/review-runs/{review_run_id}/replay`
+
+## 7. Optional Connectivity Checks
 
 Verify GitHub access from inside the container:
 
@@ -146,7 +171,7 @@ Verify LLM access from inside the container:
 docker exec github-pr-auto-review uv run python -c "from openai import OpenAI; from app.config import Settings; s=Settings(); c=OpenAI(base_url=s.llm_base_url, api_key=s.llm_api_key); r=c.chat.completions.create(model=s.llm_model, messages=[{'role':'user','content':'Reply with the single word OK'}]); print(r.choices[0].message.content)"
 ```
 
-## 7. Run Tests
+## 8. Run Tests
 
 Local test command:
 
@@ -154,8 +179,9 @@ Local test command:
 uv run pytest -q
 ```
 
-## 8. Known Limitations
+## 9. Known Limitations
 
 - The current webhook path only supports `/review` comment-triggered review
 - The container DNS fix is encoded in `docker-compose.yml`; if you use raw `docker run`, you need equivalent DNS settings yourself
 - Some LLM responses may still include weak or noisy findings; the current system prioritizes getting a real review flow running end-to-end
+- Model switching is limited to the built-in whitelist and only changes the model name, not the base URL
