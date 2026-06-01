@@ -1,9 +1,8 @@
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 
-from app.config import Settings
-from app.github.service import GitHubReviewService, decode_json_body
+from app.github.service import decode_json_body
 from app.github.webhook import should_trigger_review, verify_webhook_signature
-from app.persistence.repository import ReviewRunRepository
+from app.runtime import ensure_runtime_state, get_settings
 from app.visualization.router import router as visualization_router
 
 app = FastAPI(title="GitHub PR Auto Review")
@@ -18,8 +17,7 @@ def healthcheck() -> dict[str, str]:
 @app.post("/webhooks/github", status_code=202)
 async def github_webhook(request: Request, background_tasks: BackgroundTasks) -> dict[str, str]:
     body = await request.body()
-    settings = getattr(app.state, "settings", None) or Settings()
-    app.state.settings = settings
+    settings = get_settings(request.app)
 
     signature_256 = request.headers.get("X-Hub-Signature-256")
     if not verify_webhook_signature(settings.github_webhook_secret, body, signature_256):
@@ -30,14 +28,6 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks) ->
     if not should_trigger_review(event_name, payload):
         return {"status": "ignored"}
 
-    review_repository = getattr(app.state, "review_run_repository", None)
-    if review_repository is None and hasattr(settings, "review_db_path"):
-        review_repository = ReviewRunRepository.for_sqlite(settings.review_db_path)
-    app.state.review_run_repository = review_repository
-    review_service = getattr(app.state, "review_service", None) or GitHubReviewService(
-        settings,
-        review_run_repository=review_repository,
-    )
-    app.state.review_service = review_service
-    background_tasks.add_task(review_service.process_issue_comment, payload)
+    _, _, review_service = ensure_runtime_state(request.app)
+    background_tasks.add_task(review_service.enqueue_issue_comment, payload)
     return {"status": "accepted"}

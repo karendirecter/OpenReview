@@ -14,7 +14,7 @@ class FakeReviewService:
     def __init__(self) -> None:
         self.payloads: list[dict] = []
 
-    def process_issue_comment(self, payload: dict) -> None:
+    def enqueue_issue_comment(self, payload: dict) -> None:
         self.payloads.append(payload)
 
 

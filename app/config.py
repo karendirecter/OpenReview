@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     llm_base_url: str = Field(...)
     llm_api_key: str = Field(...)
     llm_model: str = Field(...)
+    review_worker_threads: int = Field(default=2)
     allowed_llm_models: list[str] = Field(
         default_factory=lambda: [
             "deepseek-v4-flash-260425",

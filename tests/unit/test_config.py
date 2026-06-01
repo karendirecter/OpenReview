@@ -15,6 +15,7 @@ def test_settings_load_required_review_defaults():
 
     assert settings.github_trigger_mode == "comment"
     assert settings.enable_pull_request_auto_review is False
+    assert settings.review_worker_threads == 2
     assert settings.llm_model == "deepseek-v4-flash-260425"
     assert settings.allowed_llm_models == [
         "deepseek-v4-flash-260425",

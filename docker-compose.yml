@@ -3,6 +3,8 @@ services:
     build: .
     container_name: github-pr-auto-review
     restart: unless-stopped
+    volumes:
+      - review-data:/app/.data
     dns:
       - "8.8.8.8"
       - "1.1.1.1"
@@ -19,3 +21,6 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_MODEL: ${LLM_MODEL}
+
+volumes:
+  review-data:

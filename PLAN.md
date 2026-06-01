@@ -1,5 +1,34 @@
 # GitHub PR Auto Review System Implementation Plan
 
+## Commit Hash Map
+
+- Task 1: `74cef1f`
+- Task 2: `8e429ad`
+- Task 3: `4c2fb1b`
+- Task 4: `210a423`
+- Task 5: `ab99bad`
+- Task 6: `53f512b`
+- Task 7: `8d53add`
+- Task 8: `ce76860`
+- Task 9: `44bc8d4`
+- Task 10: `6362ef3`
+- Task 11: `bb12a92`
+- Task 12: `d2b6bce`
+- Task 13: `15076be`
+- Task 14: `1b64586`
+- Task 15: `1b64586`
+- Task 16: `1b64586`
+- Task 17: `1b64586`
+- Task 18: `1b64586`
+- Task 19: `e34b9c3`
+- Task 20: `e34b9c3`
+- Task 21: `e34b9c3`
+- Task 22: `e34b9c3`
+- Task 23: `e34b9c3`
+- Task 24: `e34b9c3`
+- Task 25: `e34b9c3`
+- Task 26: `e34b9c3`
+
 **Execution note:** Before creating a new Python package directory under `app/` or `tests/`, create the directory itself and its matching `__init__.py` file in the same task so imports work consistently for cold-start implementers.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -264,7 +293,7 @@ Environment variable notes:
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`74cef1f`>**
 
 ```bash
 git add .gitignore pyproject.toml app/__init__.py app/main.py app/config.py .env.example tests/conftest.py tests/unit/__init__.py tests/integration/__init__.py tests/unit/test_config.py
@@ -434,7 +463,7 @@ class RenderedComment(BaseModel):
 - [x] **Step 4: Run test to verify it passes**
 
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`8e429ad`>**
 
 ```bash
 git add app/review/__init__.py app/review/models.py tests/unit/test_models.py
@@ -519,7 +548,7 @@ Implementation note: this starter version proves the mapping contract for a sing
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`4c2fb1b`>**
 
 ### Task 4: Load hunk context and full-file fallback
 
@@ -562,7 +591,7 @@ def select_review_context(diff_hunks: list[str], file_content: str, use_full_fil
 
 - [x] **Step 4: Run test to verify it passes**
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`210a423`>**
 
 ```bash
 git add app/review/context_loader.py tests/unit/test_context_loader.py tests/integration/fixtures/sample_python_file.py
@@ -747,7 +776,7 @@ def render_inline_comment(finding: ReviewFinding) -> str:
 Run: `uv run pytest tests/unit/test_rendering.py::test_render_inline_comment_wraps_suggestion_block -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`53f512b`>**
 
 ```bash
 git add app/review/rendering.py tests/unit/test_rendering.py
@@ -825,7 +854,7 @@ def run_analyzers(analyzers: list, file_path: str, diff: str) -> list[IssueHit]:
 Run: `uv run pytest tests/unit/test_rules_registry.py::test_run_analyzers_collects_hits_from_all_plugins -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`8d53add`>**
 
 ```bash
 git add app/rules/base.py app/rules/registry.py tests/unit/test_rules_registry.py
@@ -891,7 +920,7 @@ class GeneralDiffAnalyzer:
 Run: `uv run pytest tests/unit/test_rules_registry.py::test_general_diff_analyzer_flags_broad_exception_pass -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`ce76860`>**
 
 ```bash
 git add app/rules/diff_general.py tests/unit/test_rules_registry.py
@@ -971,7 +1000,7 @@ class PythonAstAnalyzer:
 Run: `uv run pytest tests/unit/test_rules_python_ast.py::test_python_ast_analyzer_flags_blocking_sleep_in_async_function -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`44bc8d4`>**
 
 ```bash
 git add app/rules/python_ast.py tests/unit/test_rules_python_ast.py
@@ -1046,7 +1075,7 @@ def parse_semgrep_output(payload: dict, commit_sha: str) -> list[IssueHit]:
 Run: `uv run pytest tests/unit/test_rules_semgrep_runner.py::test_parse_semgrep_output_returns_issue_hits -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`6362ef3`>**
 
 ```bash
 git add app/rules/semgrep_runner.py tests/unit/test_rules_semgrep_runner.py
@@ -1107,7 +1136,7 @@ def build_review_request(model: str, prompt: str) -> dict:
 Run: `uv run pytest tests/unit/test_llm_client.py::test_build_review_request_targets_configured_model -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`bb12a92`>**
 
 ```bash
 git add app/llm/base.py app/llm/openai_compatible.py tests/unit/test_llm_client.py
@@ -1165,7 +1194,7 @@ Do not return extra text.
 Run: `uv run pytest tests/unit/test_llm_client.py::test_build_review_prompt_includes_commit_sha_and_json_contract -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`d2b6bce`>**
 
 ```bash
 git add app/prompts/review_prompt.py tests/unit/test_llm_client.py
@@ -1225,7 +1254,7 @@ def ensure_not_stale(task: ReviewTask) -> None:
 Run: `uv run pytest tests/unit/test_orchestrator.py::test_ensure_not_stale_raises_when_head_sha_changes -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`15076be`>**
 
 ```bash
 git add app/review/orchestrator.py tests/unit/test_orchestrator.py tests/integration/test_review_pipeline.py
@@ -1312,7 +1341,7 @@ def validate_llm_payload(payload: dict, allowed_files: set[str], review_commit_s
 Run: `uv run pytest tests/unit/test_robustness_llm_payloads.py::test_validate_llm_payload_drops_negative_line_number -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`1b64586`>**
 
 ```bash
 git add app/review/schema.py tests/unit/test_robustness_llm_payloads.py
@@ -1389,7 +1418,7 @@ async def github_webhook(request: Request) -> dict[str, str]:
 Run: `uv run pytest tests/integration/test_github_webhook_route.py::test_github_webhook_ignores_non_review_comment -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`1b64586`>**
 
 ```bash
 git add app/github/models.py app/github/webhook.py app/main.py tests/integration/test_github_webhook_route.py
@@ -1444,7 +1473,7 @@ def build_local_task(repo_owner: str, repo_name: str, pr_number: int, review_com
 Run: `uv run pytest tests/integration/test_review_pipeline.py::test_build_local_task_sets_command_trigger_type -v`
 Expected: PASS
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`1b64586`>**
 
 ```bash
 git add scripts/run_local_review.py tests/integration/test_review_pipeline.py
@@ -1502,7 +1531,7 @@ services:
 Run: `docker build -t github-pr-auto-review . && docker compose up --build`
 Expected: image builds successfully and FastAPI starts on port 8000
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`1b64586`>**
 
 ```bash
 git add Dockerfile docker-compose.yml .env.example
@@ -1542,7 +1571,7 @@ Expected: PASS
 - 2026-05-27 — Task N — superpowers:test-driven-development — Added <feature>; manual intervention: <reason>
 ```
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Commit<`1b64586`>**
 
 ```bash
 git add PLAN.md AGENT_LOG.md
@@ -1894,13 +1923,13 @@ Expected: PASS
 
 `PLAN.md`
 ```markdown
-- [x] Task 19 complete (`<commit-hash>`)
-- [x] Task 20 complete (`<commit-hash>`)
-- [x] Task 21 complete (`<commit-hash>`)
-- [x] Task 22 complete (`<commit-hash>`)
-- [x] Task 23 complete (`<commit-hash>`)
-- [x] Task 24 complete (`<commit-hash>`)
-- [x] Task 25 complete (`<commit-hash>`)
+- [x] Task 19 complete (``e34b9c3``)
+- [x] Task 20 complete (``e34b9c3``)
+- [x] Task 21 complete (``e34b9c3``)
+- [x] Task 22 complete (``e34b9c3``)
+- [x] Task 23 complete (``e34b9c3``)
+- [x] Task 24 complete (``e34b9c3``)
+- [x] Task 25 complete (``e34b9c3``)
 ```
 
 - [x] **Step 4: Commit**
@@ -1909,6 +1938,66 @@ Expected: PASS
 git add .
 git commit -m "feat: add local review visualization"
 ```
+
+### Task 26: Add task locking, recoverable queueing, and stale-run cancellation
+
+**Files:**
+- Create: `app/review/queue.py`
+- Create: `app/runtime.py`
+- Modify: `app/config.py`
+- Modify: `app/main.py`
+- Modify: `app/github/service.py`
+- Modify: `app/persistence/repository.py`
+- Modify: `docker-compose.yml`
+- Test: `tests/unit/test_review_queue.py`
+- Modify: `tests/unit/test_review_run_repository.py`
+- Modify: `tests/integration/test_github_webhook_route.py`
+- Modify: `tests/integration/test_github_review_service.py`
+- Modify: `tests/integration/test_review_runs_api.py`
+
+- [x] **Step 1: Write failing tests for queue behavior and stale-run handling**
+
+```python
+def test_queue_runs_different_prs_in_parallel_but_serializes_same_pr():
+    ...
+
+def test_process_review_run_marks_stale_when_pr_head_has_advanced(tmp_path):
+    ...
+```
+
+- [x] **Step 2: Introduce PR-scoped queue and state transitions**
+
+```python
+class ReviewQueueManager:
+    ...
+
+def enqueue_issue_comment(...):
+    ...
+
+def process_review_run(...):
+    ...
+```
+
+- [x] **Step 3: Recover queued/running tasks after restart and persist history across Docker rebuilds**
+
+```python
+def recover_pending_runs(self) -> None:
+    ...
+```
+
+`docker-compose.yml`
+```yaml
+volumes:
+  - review-data:/app/.data
+```
+
+- [x] **Step 4: Verify queueing, recovery, and full regression suite**
+
+Run: `uv run pytest tests/integration/test_review_runs_api.py tests/integration/test_github_webhook_route.py tests/integration/test_github_review_service.py tests/unit/test_review_queue.py tests/unit/test_review_run_repository.py -q`
+Expected: PASS
+
+Run: `uv run pytest -q`
+Expected: PASS
 
 ---
 
@@ -1927,6 +2016,7 @@ git commit -m "feat: add local review visualization"
 - Dual-agent prompt pipeline and suggestion validation: covered by Tasks 20 and 24
 - Controlled model switching and local replay: covered by Task 22
 - Local visualization frontend: covered by Tasks 23 and 25
+- PR-level locking, recoverable queueing, and stale-run cancellation: covered by Task 26
 
 ### Placeholder scan
 

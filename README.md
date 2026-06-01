@@ -2,6 +2,22 @@
 
 An MVP GitHub App service that listens for `/review` comments on pull requests, runs Stage 1 static checks plus Stage 2 LLM review, and posts summary and inline review comments back to GitHub.
 
+## Architecture
+
+```mermaid
+flowchart TD
+  A[GitHub issue_comment /review] --> B[Webhook signature validation]
+  B --> C[Enqueue review task]
+  C --> D[PR-level lock & queue]
+  D --> E[Stage 1 static analyzers]
+  E --> F[Stage 2 inspector]
+  F --> G[Stage 2 fixer]
+  G --> H[Persist run + agent traces]
+  H --> I[Publish GitHub summary / inline comments]
+  H --> J[Local visualization API]
+  J --> K[Frontend history / replay / detail]
+```
+
 ## What It Does
 
 - Listens for GitHub `issue_comment` webhooks at `POST /webhooks/github`
@@ -14,9 +30,27 @@ An MVP GitHub App service that listens for `/review` comments on pull requests, 
   - blocking calls inside `async def`
   - resource leak heuristics
 - Runs Stage 2 LLM review through an OpenAI-compatible API
+- Queues review runs with PR-scoped serialization and multi-PR parallelism
+- Recovers queued/running tasks after process restart
 - Posts:
   - one PR summary comment
   - zero or more inline review comments
+
+## Technical Highlights
+
+- PR-scoped serialization with multi-PR concurrency: same PR is locked and queued, different PRs can run in parallel.
+- Durable review history: every run stores task payloads, agent traces, summaries, rendered comments, and replay metadata.
+- Dual-agent review pipeline: inspector confirms defect reality, fixer generates minimal suggestions, with validation and fallback recovery for partial model outputs.
+- Stale-run suppression: queued/running tasks are rechecked against the latest `head.sha` before comment publication.
+- Local observability loop: the UI exposes review history, agent traces, model replay, and final findings for postmortem analysis.
+
+## Problems Solved
+
+- Prevents duplicate or overlapping reviews on the same PR.
+- Avoids publishing stale comments after the PR head advances.
+- Preserves review history across container restarts.
+- Keeps model output failures from collapsing the entire review result into a degraded pass.
+- Makes agent collaboration debuggable through persisted traces and replayable runs.
 
 ## Requirements
 
@@ -29,7 +63,7 @@ An MVP GitHub App service that listens for `/review` comments on pull requests, 
 
 ```powershell
 git clone <your-repo-url>
-cd <repo>\.claude\worktrees\task19-visualization
+cd <repo>\.claude\worktrees\task26-concurrency
 copy .env.example .env
 ```
 
@@ -103,6 +137,7 @@ Expected response:
 ```
 
 The local review history database is stored at `.data/review_runs.db`.
+When using Docker Compose, it is persisted through the `review-data` named volume.
 
 ## 4. Expose The Webhook Publicly
 
@@ -179,7 +214,19 @@ Local test command:
 uv run pytest -q
 ```
 
-## 9. Known Limitations
+## 9. CI/CD
+
+GitHub Actions is configured in `.github/workflows/ci.yml` and runs on every `push`, every `pull_request`, and manual `workflow_dispatch`.
+
+The workflow leaves visible checks on GitHub for three independent jobs:
+
+- `Backend Tests`: installs Python dependencies with `uv` and runs `uv run pytest -q`
+- `Frontend Build`: installs frontend dependencies with `npm ci --prefix frontend` and runs `npm run --prefix frontend build`
+- `Docker Build`: runs `docker build -t github-pr-auto-review:ci .`
+
+This matches the course requirement that CI automatically runs tests and verifies that the Docker image can be built for each push.
+
+## 10. Known Limitations
 
 - The current webhook path only supports `/review` comment-triggered review
 - The container DNS fix is encoded in `docker-compose.yml`; if you use raw `docker run`, you need equivalent DNS settings yourself
