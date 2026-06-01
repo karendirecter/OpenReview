@@ -1,34 +1,5 @@
 # GitHub PR Auto Review System Implementation Plan
 
-## Commit Hash Map
-
-- Task 1: `74cef1f`
-- Task 2: `8e429ad`
-- Task 3: `4c2fb1b`
-- Task 4: `210a423`
-- Task 5: `ab99bad`
-- Task 6: `53f512b`
-- Task 7: `8d53add`
-- Task 8: `ce76860`
-- Task 9: `44bc8d4`
-- Task 10: `6362ef3`
-- Task 11: `bb12a92`
-- Task 12: `d2b6bce`
-- Task 13: `15076be`
-- Task 14: `1b64586`
-- Task 15: `1b64586`
-- Task 16: `1b64586`
-- Task 17: `1b64586`
-- Task 18: `1b64586`
-- Task 19: `e34b9c3`
-- Task 20: `e34b9c3`
-- Task 21: `e34b9c3`
-- Task 22: `e34b9c3`
-- Task 23: `e34b9c3`
-- Task 24: `e34b9c3`
-- Task 25: `e34b9c3`
-- Task 26: `e34b9c3`
-
 **Execution note:** Before creating a new Python package directory under `app/` or `tests/`, create the directory itself and its matching `__init__.py` file in the same task so imports work consistently for cold-start implementers.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -1999,6 +1970,12 @@ Expected: PASS
 Run: `uv run pytest -q`
 Expected: PASS
 
+- [x] **Step 5: Commit<`b4a4c6e`>**
+
+```bash
+git add .
+git commit -m "feat: add concurrency"
+```
 ---
 
 ## Self-Review
