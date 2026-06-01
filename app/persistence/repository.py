@@ -160,6 +160,46 @@ class ReviewRunRepository:
             ).fetchall()
         return [self._row_to_run(row) for row in rows]
 
+    def list_runs_by_status(self, statuses: tuple[str, ...], *, limit: int = 20) -> list[ReviewRunRecord]:
+        placeholders = ", ".join("?" for _ in statuses)
+        query = f"""
+            select * from review_runs
+            where status in ({placeholders})
+            order by created_at desc
+            limit ?
+        """
+        params = (*statuses, limit)
+        with self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [self._row_to_run(row) for row in rows]
+
+    def list_runs_for_pr(
+        self,
+        repo_owner: str,
+        repo_name: str,
+        pr_number: int,
+        *,
+        statuses: tuple[str, ...] | None = None,
+        limit: int = 20,
+    ) -> list[ReviewRunRecord]:
+        query = """
+            select * from review_runs
+            where repo_owner = ?
+              and repo_name = ?
+              and pr_number = ?
+        """
+        params: list[object] = [repo_owner, repo_name, pr_number]
+        if statuses:
+            placeholders = ", ".join("?" for _ in statuses)
+            query += f" and status in ({placeholders})"
+            params.extend(statuses)
+        query += " order by created_at desc limit ?"
+        params.append(limit)
+
+        with self._connect() as connection:
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return [self._row_to_run(row) for row in rows]
+
     def get_run(self, review_run_id: str) -> ReviewRunRecord:
         with self._connect() as connection:
             row = connection.execute(

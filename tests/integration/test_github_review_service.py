@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+from app.persistence.models import ReviewRunCreate
+from app.persistence.repository import ReviewRunRepository
 from app.github.service import GitHubReviewService
 
 
@@ -55,6 +57,23 @@ class FakeGithub:
     def get_repo(self, full_name: str):
         assert full_name == "octo/demo"
         return self._repo
+
+
+class FakeQueueManager:
+    def __init__(self) -> None:
+        self.enqueued: list[tuple[str, object]] = []
+        self.cancelled: list[object] = []
+
+    def enqueue(self, review_run_id: str, pr_key) -> None:
+        self.enqueued.append((review_run_id, pr_key))
+
+    def cancel_pending_for_pr(self, pr_key) -> list[str]:
+        self.cancelled.append(pr_key)
+        return [
+            review_run_id
+            for review_run_id, queued_key in self.enqueued
+            if queued_key == pr_key
+        ]
 
 
 class FakeLLMClient:
@@ -433,3 +452,229 @@ def test_process_issue_comment_salvages_rejected_fallback_findings():
     assert "Missing None check for get_page_by_id return value" in pr.issue_comments[0]
     assert len(pr.inline_comments) == 1
     assert pr.inline_comments[0]["path"] == "app/service.py"
+
+
+def test_enqueue_issue_comment_cancels_older_queued_runs_for_same_pr(tmp_path):
+    source = "def run(value):\n    return value.id\n"
+    patch = "@@ -1,1 +1,2 @@\n-return old\n+return value.id\n"
+    pr = FakePullRequest(
+        number=20,
+        files=[FakePullFile(filename="app/service.py", patch=patch)],
+        file_contents={"app/service.py": source},
+    )
+    repo = FakeRepo(pr, {"app/service.py": source})
+    github = FakeGithub(repo)
+    queue_manager = FakeQueueManager()
+    repository = ReviewRunRepository.for_sqlite(tmp_path / "review_runs.db")
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+        review_worker_threads=2,
+    )
+    service = GitHubReviewService(
+        settings=settings,
+        github_client_factory=lambda: github,
+        llm_client=FakeLLMClient(),
+        review_run_repository=repository,
+        review_queue=queue_manager,
+    )
+
+    first_payload = {
+        "action": "created",
+        "comment": {"id": 21, "body": "/review"},
+        "issue": {"number": 20, "pull_request": {"url": "https://api.github.com/repos/octo/demo/pulls/20"}},
+        "repository": {"name": "demo", "full_name": "octo/demo", "owner": {"login": "octo"}},
+    }
+    second_payload = {
+        "action": "created",
+        "comment": {"id": 22, "body": "/review"},
+        "issue": {"number": 20, "pull_request": {"url": "https://api.github.com/repos/octo/demo/pulls/20"}},
+        "repository": {"name": "demo", "full_name": "octo/demo", "owner": {"login": "octo"}},
+    }
+
+    service.enqueue_issue_comment(first_payload)
+    service.enqueue_issue_comment(second_payload)
+
+    runs = repository.list_runs(limit=10)
+
+    assert len(queue_manager.enqueued) == 2
+    assert runs[0].status == "queued"
+    assert runs[1].status == "cancelled"
+
+
+def test_process_review_run_marks_stale_when_pr_head_has_advanced(tmp_path):
+    source = "def run(value):\n    return value.id\n"
+    patch = "@@ -1,1 +1,2 @@\n-return old\n+return value.id\n"
+    pr = FakePullRequest(
+        number=21,
+        files=[FakePullFile(filename="app/service.py", patch=patch)],
+        file_contents={"app/service.py": source},
+    )
+    pr.head.sha = "newhead456"
+    repo = FakeRepo(pr, {"app/service.py": source})
+    github = FakeGithub(repo)
+    repository = ReviewRunRepository.for_sqlite(tmp_path / "review_runs.db")
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+        review_worker_threads=2,
+    )
+    service = GitHubReviewService(
+        settings=settings,
+        github_client_factory=lambda: github,
+        llm_client=FakeLLMClient(),
+        review_run_repository=repository,
+    )
+    repository.create_run(
+        ReviewRunCreate(
+            review_run_id="run-stale",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=21,
+            review_commit_sha="oldhead123",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="queued",
+            task_payload={
+                "review_run_id": "run-stale",
+                "repo_owner": "octo",
+                "repo_name": "demo",
+                "pr_number": 21,
+                "base_sha": "base123",
+                "head_sha": "oldhead123",
+                "review_commit_sha": "oldhead123",
+                "selected_model": "model",
+                "trigger_type": "command",
+                "trigger_comment_id": 99,
+                "changed_files": [
+                    {
+                        "file_path": "app/service.py",
+                        "language": "python",
+                        "status": "modified",
+                        "diff_hunks": [patch],
+                        "full_file_content": source,
+                        "position_mapping": {"2": 2},
+                    }
+                ],
+            },
+        )
+    )
+
+    service.process_review_run("run-stale")
+    updated = repository.get_run("run-stale")
+
+    assert updated.status == "stale"
+    assert pr.issue_comments == []
+    assert pr.inline_comments == []
+
+
+def test_recover_pending_runs_requeues_latest_run_per_pr_and_resets_running(tmp_path):
+    queue_manager = FakeQueueManager()
+    repository = ReviewRunRepository.for_sqlite(tmp_path / "review_runs.db")
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+        review_worker_threads=2,
+    )
+    service = GitHubReviewService(
+        settings=settings,
+        github_client_factory=lambda: None,
+        llm_client=FakeLLMClient(),
+        review_run_repository=repository,
+        review_queue=queue_manager,
+    )
+
+    repository.create_run(
+        ReviewRunCreate(
+            review_run_id="run-older",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=30,
+            review_commit_sha="head-old",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="queued",
+            task_payload={
+                "review_run_id": "run-older",
+                "repo_owner": "octo",
+                "repo_name": "demo",
+                "pr_number": 30,
+                "base_sha": "base",
+                "head_sha": "head-old",
+                "review_commit_sha": "head-old",
+                "selected_model": "model",
+                "trigger_type": "command",
+                "changed_files": [],
+            },
+        )
+    )
+    repository.create_run(
+        ReviewRunCreate(
+            review_run_id="run-newer",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=30,
+            review_commit_sha="head-new",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="queued",
+            task_payload={
+                "review_run_id": "run-newer",
+                "repo_owner": "octo",
+                "repo_name": "demo",
+                "pr_number": 30,
+                "base_sha": "base",
+                "head_sha": "head-new",
+                "review_commit_sha": "head-new",
+                "selected_model": "model",
+                "trigger_type": "command",
+                "changed_files": [],
+            },
+        )
+    )
+    repository.create_run(
+        ReviewRunCreate(
+            review_run_id="run-running",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=31,
+            review_commit_sha="head-running",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="running",
+            task_payload={
+                "review_run_id": "run-running",
+                "repo_owner": "octo",
+                "repo_name": "demo",
+                "pr_number": 31,
+                "base_sha": "base",
+                "head_sha": "head-running",
+                "review_commit_sha": "head-running",
+                "selected_model": "model",
+                "trigger_type": "command",
+                "changed_files": [],
+            },
+        )
+    )
+
+    service.recover_pending_runs()
+
+    assert [item[0] for item in queue_manager.enqueued] == ["run-running", "run-newer"]
+    assert repository.get_run("run-running").status == "queued"
+    assert repository.get_run("run-older").status == "cancelled"

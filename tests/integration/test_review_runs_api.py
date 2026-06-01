@@ -22,6 +22,8 @@ def build_client(tmp_path: Path) -> tuple[TestClient, ReviewRunRepository]:
         review_db_path=tmp_path / "review_runs.db",
     )
     app.state.review_run_repository = repository
+    app.state.review_service = None
+    app.state.review_recovery_completed = False
     return TestClient(app), repository
 
 

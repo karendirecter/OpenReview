@@ -65,3 +65,50 @@ def test_repository_can_store_agent_traces_and_run_detail(tmp_path):
     assert detail.run.status == "completed"
     assert detail.run.result_payload["summary"] == "done"
     assert detail.agent_traces[0].agent_role == "inspector"
+
+
+def test_repository_can_list_active_runs_for_same_pr(tmp_path):
+    repo = ReviewRunRepository.for_sqlite(tmp_path / "review_runs.db")
+    repo.create_run(
+        ReviewRunCreate(
+            review_run_id="run-queued",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=11,
+            review_commit_sha="abc123",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="queued",
+        )
+    )
+    repo.create_run(
+        ReviewRunCreate(
+            review_run_id="run-running",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=11,
+            review_commit_sha="def456",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="running",
+        )
+    )
+    repo.create_run(
+        ReviewRunCreate(
+            review_run_id="run-completed",
+            repo_owner="octo",
+            repo_name="demo",
+            pr_number=11,
+            review_commit_sha="ghi789",
+            trigger_type="command",
+            selected_model="model",
+            base_url="https://example.com",
+            status="completed",
+        )
+    )
+
+    active = repo.list_runs_for_pr("octo", "demo", 11, statuses=("queued", "running"))
+
+    assert [run.review_run_id for run in active] == ["run-running", "run-queued"]
