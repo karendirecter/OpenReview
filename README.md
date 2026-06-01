@@ -63,7 +63,6 @@ flowchart TD
 
 ```powershell
 git clone <your-repo-url>
-cd <repo>\.claude\worktrees\task26-concurrency
 copy .env.example .env
 ```
 
