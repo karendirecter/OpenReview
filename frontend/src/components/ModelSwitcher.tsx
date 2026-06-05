@@ -16,18 +16,25 @@ export function ModelSwitcher({
   return (
     <section className="panel model-switcher">
       <div className="panel__header">
-        <h2>Model Replay</h2>
+        <div>
+          <p className="panel__eyebrow">Execution tools</p>
+          <h2>Model Replay</h2>
+        </div>
+        <span className="panel__meta">{models.length} models</span>
       </div>
       <div className="model-switcher__controls">
-        <select value={selectedModel} onChange={(event) => onChange(event.target.value)}>
-          {models.map((model) => (
-            <option key={model} value={model}>
-              {model}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={onReplay} disabled={loading}>
-          {loading ? "Replaying..." : "Replay"}
+        <label className="field">
+          <span className="field__label">Replay model</span>
+          <select value={selectedModel} onChange={(event) => onChange(event.target.value)}>
+            {models.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="button" onClick={onReplay} disabled={loading || !selectedModel}>
+          {loading ? "Replaying..." : "Replay run"}
         </button>
       </div>
     </section>
