@@ -137,7 +137,7 @@ def test_review_pull_request_does_not_report_pass_when_llm_fallback_returns_no_f
     assert len(llm_client.prompts) == 1
     assert result.findings == []
     assert result.overall_risk == "medium"
-    assert "LLM 复核没有产出有效结果" in result.summary
+    assert "LLM fallback did not return any actionable findings" in result.summary
 
 
 class StringFindingsLLMClient:

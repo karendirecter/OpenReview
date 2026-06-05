@@ -1,8 +1,12 @@
 from types import SimpleNamespace
 
+from github.GithubException import GithubException
+
+from app.github.models import IssueCommentPayload
 from app.persistence.models import ReviewRunCreate
 from app.persistence.repository import ReviewRunRepository
 from app.github.service import GitHubReviewService
+from app.review.models import ChangedFile, RenderedComment
 
 
 class FakeContentFile:
@@ -48,6 +52,26 @@ class FakePullRequest:
 
     def create_review_comment(self, **kwargs) -> None:
         self.inline_comments.append(kwargs)
+
+
+class FailingInlinePullRequest(FakePullRequest):
+    def create_review_comment(self, **kwargs) -> None:
+        if kwargs["line"] == 4:
+            raise GithubException(
+                status=422,
+                data={
+                    "message": "Validation Failed",
+                    "errors": [
+                        {
+                            "resource": "PullRequestReviewComment",
+                            "code": "custom",
+                            "field": "pull_request_review_thread.line",
+                            "message": "could not be resolved",
+                        }
+                    ],
+                },
+            )
+        super().create_review_comment(**kwargs)
 
 
 class FakeGithub:
@@ -239,7 +263,7 @@ def test_process_issue_comment_posts_summary_and_inline_comments():
     )
 
     assert len(pr.issue_comments) == 1
-    assert "自动代码审查结果" in pr.issue_comments[0]
+    assert "Automated Code Review Results" in pr.issue_comments[0]
     assert len(pr.inline_comments) == 1
     assert pr.inline_comments[0]["path"] == "app/api.py"
     assert pr.inline_comments[0]["line"] == 4
@@ -335,8 +359,141 @@ def test_process_issue_comment_reports_degraded_review_when_llm_fallback_returns
 
     assert len(llm_client.prompts) == 1
     assert len(pr.issue_comments) == 1
-    assert "LLM 复核没有产出有效结果" in pr.issue_comments[0]
+    assert "LLM fallback did not return any actionable findings" in pr.issue_comments[0]
     assert pr.inline_comments == []
+
+
+def test_publish_review_skips_inline_comments_outside_diff_context():
+    patch = "@@ -2,3 +2,4 @@\n import time\n \n async def endpoint():\n+    time.sleep(1)\n"
+    changed_file = ChangedFile(
+        file_path="app/api.py",
+        language="python",
+        status="modified",
+        diff_hunks=[patch],
+        full_file_content="import asyncio\nimport time\n\nasync def endpoint():\n    time.sleep(1)\n",
+    )
+    pr = FakePullRequest(
+        number=13,
+        files=[FakePullFile(filename="app/api.py", patch=patch)],
+        file_contents={"app/api.py": changed_file.full_file_content or ""},
+    )
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+    )
+    service = GitHubReviewService(settings=settings, github_client_factory=lambda: None, llm_client=FakeLLMClient())
+    comments = [
+        RenderedComment(comment_type="summary", body="summary", commit_sha="head123"),
+        RenderedComment(
+            comment_type="inline",
+            body="valid inline",
+            file_path="app/api.py",
+            line_number=4,
+            end_line_number=4,
+            side="RIGHT",
+            commit_sha="head123",
+        ),
+        RenderedComment(
+            comment_type="inline",
+            body="invalid inline",
+            file_path="app/api.py",
+            line_number=20,
+            end_line_number=20,
+            side="RIGHT",
+            commit_sha="head123",
+        ),
+    ]
+
+    published = service._publish_review(pr, comments, [changed_file])
+
+    assert published == {"summary_posted": 1, "inline_posted": 1, "inline_skipped": 1, "inline_failed": 0}
+    assert pr.issue_comments == ["summary"]
+    assert len(pr.inline_comments) == 1
+    assert pr.inline_comments[0]["line"] == 4
+
+
+def test_publish_review_continues_when_github_rejects_one_inline_comment():
+    patch = "@@ -2,3 +2,4 @@\n import time\n \n async def endpoint():\n+    time.sleep(1)\n"
+    changed_file = ChangedFile(
+        file_path="app/api.py",
+        language="python",
+        status="modified",
+        diff_hunks=[patch],
+        full_file_content="import asyncio\nimport time\n\nasync def endpoint():\n    time.sleep(1)\n",
+    )
+    pr = FailingInlinePullRequest(
+        number=14,
+        files=[FakePullFile(filename="app/api.py", patch=patch)],
+        file_contents={"app/api.py": changed_file.full_file_content or ""},
+    )
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+    )
+    service = GitHubReviewService(settings=settings, github_client_factory=lambda: None, llm_client=FakeLLMClient())
+    comments = [
+        RenderedComment(comment_type="summary", body="summary", commit_sha="head123"),
+        RenderedComment(
+            comment_type="inline",
+            body="first inline",
+            file_path="app/api.py",
+            line_number=4,
+            end_line_number=4,
+            side="RIGHT",
+            commit_sha="head123",
+        ),
+        RenderedComment(
+            comment_type="inline",
+            body="second inline",
+            file_path="app/api.py",
+            line_number=5,
+            end_line_number=5,
+            side="RIGHT",
+            commit_sha="head123",
+        ),
+    ]
+
+    published = service._publish_review(pr, comments, [changed_file])
+
+    assert published == {"summary_posted": 1, "inline_posted": 1, "inline_skipped": 0, "inline_failed": 1}
+    assert pr.issue_comments == ["summary"]
+    assert len(pr.inline_comments) == 1
+    assert pr.inline_comments[0]["body"] == "second inline"
+
+
+def test_post_failure_comment_uses_readable_text():
+    pr = FakePullRequest(number=15, files=[], file_contents={})
+    repo = FakeRepo(pr, {})
+    github = FakeGithub(repo)
+    settings = SimpleNamespace(
+        github_app_id="123",
+        github_private_key="key",
+        github_installation_id="456",
+        llm_base_url="https://example.com",
+        llm_api_key="token",
+        llm_model="model",
+    )
+    service = GitHubReviewService(settings=settings, github_client_factory=lambda: github, llm_client=FakeLLMClient())
+    payload = IssueCommentPayload.model_validate(
+        {
+            "action": "created",
+            "comment": {"id": 15, "body": "/review"},
+            "issue": {"number": 15, "pull_request": {"url": "https://api.github.com/repos/octo/demo/pulls/15"}},
+            "repository": {"name": "demo", "full_name": "octo/demo", "owner": {"login": "octo"}},
+        }
+    )
+
+    service._post_failure_comment(payload, "Validation Failed")
+
+    assert pr.issue_comments == ["Automated review failed.\n\n- PR: #15\n- Reason: `Validation Failed`"]
 
 
 def test_process_issue_comment_salvages_string_findings_from_llm_payload():

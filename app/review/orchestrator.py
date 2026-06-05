@@ -423,11 +423,15 @@ def derive_string_finding_title(detail: str) -> str:
 def summarize_findings(findings: list[ReviewFinding], *, used_llm_fallback: bool = False) -> tuple[str, str]:
     if not findings:
         if used_llm_fallback:
-            return "静态规则未命中，但 LLM 复核没有产出有效结果；本次自动审查已降级，请人工复查或稍后重试。", "medium"
-        return "未发现高置信正确性缺陷，检查通过。", "low"
+            return (
+                "Static checks found no candidate issues, and the LLM fallback did not return any actionable findings. "
+                "This review was downgraded; please inspect manually or retry later.",
+                "medium",
+            )
+        return "No high-confidence correctness issues were identified in the changed code.", "low"
 
     overall_risk = "high" if any(finding.risk_level == "high" for finding in findings) else "medium"
-    return f"发现 {len(findings)} 个需要关注的正确性问题。", overall_risk
+    return f"Found {len(findings)} correctness issue(s) that need attention.", overall_risk
 
 
 def extract_code_snippet(changed_file: ChangedFile | None, line_number: int) -> str:

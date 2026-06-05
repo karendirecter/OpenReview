@@ -23,7 +23,7 @@ def render_inline_comment(finding: ReviewFinding) -> str:
 
 def render_summary_comment(result: ReviewResult) -> str:
     lines = [
-        "## 自动代码审查结果",
+        "## Automated Code Review Results",
         "",
         f"- Commit: `{result.review_commit_sha}`",
         f"- Overall risk: `{result.overall_risk}`",

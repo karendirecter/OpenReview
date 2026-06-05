@@ -80,6 +80,45 @@ def build_patch_position_mapping(patch: str) -> dict[int, int]:
     return mapping
 
 
+def build_commentable_line_ranges(diff_hunks: list[str]) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
+
+    for hunk in diff_hunks:
+        lines = hunk.splitlines()
+        if not lines:
+            continue
+
+        header_match = match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", lines[0])
+        if header_match is None:
+            continue
+
+        start = int(header_match.group(1))
+        length = int(header_match.group(2) or "1")
+        if length <= 0:
+            continue
+
+        ranges.append((start, start + length - 1))
+
+    return ranges
+
+
+def resolve_comment_line_range(
+    changed_file: ChangedFile,
+    line_number: int,
+    end_line_number: int | None,
+) -> tuple[int, int] | None:
+    target_end = end_line_number or line_number
+
+    for start, end in build_commentable_line_ranges(changed_file.diff_hunks):
+        if not (start <= line_number <= end):
+            continue
+        if line_number <= target_end <= end:
+            return line_number, target_end
+        return line_number, line_number
+
+    return None
+
+
 class GitHubReviewService:
     def __init__(
         self,
@@ -244,8 +283,14 @@ class GitHubReviewService:
         except UnicodeDecodeError:
             return None
 
-    def _publish_review(self, pull_request: PullRequest, comments: list[RenderedComment]) -> dict[str, Any]:
-        published = {"summary_posted": 0, "inline_posted": 0}
+    def _publish_review(
+        self,
+        pull_request: PullRequest,
+        comments: list[RenderedComment],
+        changed_files: list[ChangedFile],
+    ) -> dict[str, Any]:
+        published = {"summary_posted": 0, "inline_posted": 0, "inline_skipped": 0, "inline_failed": 0}
+        changed_file_lookup = {item.file_path: item for item in changed_files}
 
         for comment in comments:
             if comment.comment_type == "summary":
@@ -256,18 +301,48 @@ class GitHubReviewService:
             if comment.file_path is None or comment.line_number is None:
                 continue
 
+            changed_file = changed_file_lookup.get(comment.file_path)
+            if changed_file is None:
+                LOGGER.warning("Skipping inline review comment for unknown file path: %s", comment.file_path)
+                published["inline_skipped"] += 1
+                continue
+
+            resolved_range = resolve_comment_line_range(changed_file, comment.line_number, comment.end_line_number)
+            if resolved_range is None:
+                LOGGER.warning(
+                    "Skipping inline review comment outside diff context for %s:%s-%s",
+                    comment.file_path,
+                    comment.line_number,
+                    comment.end_line_number or comment.line_number,
+                )
+                published["inline_skipped"] += 1
+                continue
+
+            start_line, end_line = resolved_range
+
             kwargs: dict[str, Any] = {
                 "body": comment.body,
                 "commit": comment.commit_sha,
                 "path": comment.file_path,
-                "line": comment.end_line_number or comment.line_number,
+                "line": end_line,
                 "side": comment.side or "RIGHT",
             }
-            if comment.end_line_number and comment.end_line_number > comment.line_number:
-                kwargs["start_line"] = comment.line_number
+            if end_line > start_line:
+                kwargs["start_line"] = start_line
                 kwargs["start_side"] = comment.side or "RIGHT"
 
-            pull_request.create_review_comment(**kwargs)
+            try:
+                pull_request.create_review_comment(**kwargs)
+            except GithubException as exc:
+                LOGGER.warning(
+                    "Failed to publish inline review comment for %s:%s-%s: %s",
+                    comment.file_path,
+                    start_line,
+                    end_line,
+                    exc.data if hasattr(exc, "data") else str(exc),
+                )
+                published["inline_failed"] += 1
+                continue
             published["inline_posted"] += 1
 
         return published
@@ -278,9 +353,9 @@ class GitHubReviewService:
             repo = github.get_repo(payload.repository.full_name)
             pull_request = repo.get_pull(payload.issue.number)
             pull_request.create_issue_comment(
-                "自动审查执行失败。\n\n"
+                "Automated review failed.\n\n"
                 f"- PR: #{payload.issue.number}\n"
-                f"- 原因: `{error_message[:300]}`"
+                f"- Reason: `{error_message[:300]}`"
             )
         except Exception:  # noqa: BLE001
             LOGGER.exception("Failed to post review failure comment")
@@ -383,7 +458,7 @@ class GitHubReviewService:
             return
 
         comments = render_review_comments(result)
-        github_status = self._publish_review(fresh_context.pull_request, comments)
+        github_status = self._publish_review(fresh_context.pull_request, comments, task.changed_files)
         self._complete_review_run(task, result, comments, github_status)
 
     def _pull_request_key(self, task: ReviewTask) -> PullRequestKey:
@@ -470,9 +545,9 @@ class GitHubReviewService:
         try:
             context = self._load_pull_request_context_for_task(task)
             context.pull_request.create_issue_comment(
-                "鑷姩瀹℃煡鎵ц澶辫触銆俓n\n"
+                "Queued automated review failed.\n\n"
                 f"- PR: #{task.pr_number}\n"
-                f"- 鍘熷洜: `{error_message[:300]}`"
+                f"- Reason: `{error_message[:300]}`"
             )
         except Exception:  # noqa: BLE001
             LOGGER.exception("Failed to post queued review failure comment")
