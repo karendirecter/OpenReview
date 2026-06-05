@@ -52,6 +52,39 @@ flowchart TD
 - Keeps model output failures from collapsing the entire review result into a degraded pass.
 - Makes agent collaboration debuggable through persisted traces and replayable runs.
 
+## Deployment Layout
+
+- Single-container deployment for production: FastAPI serves both `/api/*` endpoints and the built frontend from `frontend/dist`.
+- Local development can still run split-mode: backend on `:8000`, Vite dev server on `:4173`.
+- Render deployment target: one Docker-based web service, with the same container shape used locally.
+- Persistent data: review history is stored in SQLite at `.data/review_runs.db`, or in the `review-data` Docker volume when using Compose.
+
+## Project Structure
+
+```text
+.
+├─ app/                         # FastAPI app, review pipeline, GitHub integration, persistence
+│  ├─ github/                   # Webhook parsing and GitHub service integration
+│  ├─ llm/                      # OpenAI-compatible LLM client abstraction
+│  ├─ persistence/              # SQLite-backed review run repository
+│  ├─ prompts/                  # Structured review prompt builders
+│  ├─ review/                   # Orchestration, rendering, queueing, replay flow
+│  ├─ rules/                    # Diff rules, Python AST checks, Semgrep adapter
+│  └─ visualization/            # Local monitoring and replay API
+├─ frontend/                    # React + Vite dashboard UI
+│  └─ src/
+├─ scripts/                     # Local review and utility scripts
+├─ tests/                       # Unit and integration tests
+├─ .github/workflows/           # CI pipeline
+├─ Dockerfile                   # Unified frontend + backend image
+├─ docker-compose.yml           # Local multi-command orchestration and data volume
+├─ SPEC.md                      # Design specification
+├─ PLAN.md                      # Task-level implementation plan
+├─ SPEC_PROCESS.md              # Spec generation and cold-start validation process
+├─ AGENT_LOG.md                 # Agent workflow log
+└─ REFLECTION.md                # Final reflection report
+```
+
 ## Requirements
 
 - Python `3.11+`
@@ -103,6 +136,19 @@ The service only reacts to PR comments. Normal issue comments are ignored.
 ## 3. Start The Service
 
 This repository already includes DNS settings in `docker-compose.yml` because some Docker environments incorrectly resolve `github.com` and `api.github.com`.
+
+Single-image Docker commands:
+
+```powershell
+docker build -t github-pr-auto-review .
+docker run --rm -p 8000:8000 --env-file .env github-pr-auto-review
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
 
 Start with:
 
@@ -171,25 +217,18 @@ Expected behavior:
 
 ## 6. Local Visualization
 
-Install and start the frontend:
+The visualization UI is already integrated into the Docker image and the Render deployment.
+If the service is running through Docker Compose, `docker run`, or Render, just open your service url
 
-```powershell
-npm install --prefix frontend
-npm run --prefix frontend dev
-```
 
-Build the frontend:
-
-```powershell
-npm run --prefix frontend build
-```
-
-The UI reads:
+The UI reads these backend endpoints:
 
 - `GET /api/review-runs`
 - `GET /api/review-runs/{review_run_id}`
 - `GET /api/models`
 - `POST /api/review-runs/{review_run_id}/replay`
+
+If you only want to debug the frontend separately during development, you can still run Vite manually, but that is optional and not required for normal local or cloud deployment.
 
 ## 7. Optional Connectivity Checks
 
@@ -230,4 +269,5 @@ This matches the course requirement that CI automatically runs tests and verifie
 - The current webhook path only supports `/review` comment-triggered review
 - The container DNS fix is encoded in `docker-compose.yml`; if you use raw `docker run`, you need equivalent DNS settings yourself
 - Some LLM responses may still include weak or noisy findings; the current system prioritizes getting a real review flow running end-to-end
-- Model switching is limited to the built-in whitelist and only changes the model name, not the base URL
+- Model switching is limited to the built-in whitelist and only changes the model name, not the base URL, so the selected models must all be supported by the configured API provider
+- Docker image validation depends on external registry connectivity; in restricted networks, `docker build` may fail before the project code is even evaluated, while deployment on Render or another overseas cloud service is usually more reliable

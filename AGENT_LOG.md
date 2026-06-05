@@ -197,113 +197,38 @@
 - **Webhook 验证结果**：本地 `POST /webhooks/github` 在携带 `X-GitHub-Event: issue_comment` 且评论正文为 `/review` 时返回 `{\"status\":\"accepted\"}`；未带该事件头时返回 `{\"status\":\"ignored\"}`，符合当前实现。
 - **注意事项**：日志中发现曾有请求打到 `/webhook` 与 `/` 并返回 404，因此 GitHub App 的 webhook URL 必须明确配置为 `/webhooks/github`。
 
-## 2026-05-29 Task 18 detail：真实 DeepSeek 审查联通与兼容性补强
-- **时间戳与 task 编号**：2026-05-29 / Task 18 detail
+## 2026-05-29 Task 18 TDD 进展（Step 1-4）
+
+- **时间戳与 task 编号**：2026-05-29 / Task 18
 - **触发的 Superpowers 技能**：`test-driven-development`、`systematic-debugging`
-- **关键 prompt / context 配置**：用户要求继续补静态审查规则，并把真实 GitHub App + DeepSeek 审查链路打通；重点不是“评论能发出去”，而是要让真实 PR 暴露出的错误能被模型发现并稳定回贴。
-- **真实联通验证**：
-  - 使用宿主机 Python 环境对安装仓库 `karendirecter/notion-lite` 的 PR `#2` 多次重放 `/review`
-  - GitHub API 访问在当前宿主机上存在证书校验问题，诊断阶段临时使用 `GithubIntegration(..., verify=False)` 完成真实调用
-  - DeepSeek / OpenAI-compatible 接口同样临时通过 `httpx.Client(verify=False)` 完成联通诊断
-- **新增代码改动**：
-  - `app/llm/openai_compatible.py`
-    - 当模型拒绝 `response_format={"type":"json_object"}` 时，自动重试不带 `response_format` 的 JSON 调用
-  - `app/review/schema.py`
-    - `validate_llm_payload(...)` 改为逐条容错，非法 finding 不再拖垮整个 Stage 2
-  - `app/review/orchestrator.py`
-    - 新增字符串 finding 的兜底转换逻辑
-    - 当 LLM 返回 `findings: [string, ...]` 这类半结构化结果时，按当前候选文件与行号补全为可回贴的 `ReviewFinding`
-- **测试补充**：
-  - `tests/unit/test_llm_client.py`：覆盖 `json_object` 不支持时的自动回退
-  - `tests/unit/test_schema_validation.py`：覆盖“非法条目跳过、合法 finding 保留”
-  - `tests/unit/test_orchestrator.py`：覆盖字符串 finding 被兜底转换
-  - `tests/integration/test_github_review_service.py`：覆盖字符串 finding 场景下的真实回贴路径
-- **验证结果**：
-  - `uv run pytest -q` 全量通过，结果为 `39 passed in 0.85s`
-  - 对真实 PR `#2` 的最终一次重放结果：
-    - issue comment 从 `4` 增至 `5`
-    - review inline comment 从 `0` 增至 `3`
-    - 顶层总结回贴为 `Final findings: 3`
-    - 其中至少 1 条真实指出了 `update_page_blocks` 在 `page is None` 时会触发 `AttributeError`
-- **学到的教训**：
-  - OpenAI-compatible 并不等于所有模型都支持 `response_format={"type":"json_object"}`
-  - 真实 LLM 输出经常只“半结构化”，工程上必须补上“字段可推断则补全”和“单条坏 finding 不拖垮整次审查”的兜底
-  - 用真实 PR 做回放验证，比只看本地假数据更容易暴露 prompt 契约和 schema 假设的问题
+- **关键 prompt / context 配置**：用户要求在保留 Task 18 真实联调目标的同时，先补齐两类基础能力：一是扩展 Python 静态规则覆盖 `None` 风险和缺失 `await`；二是保证 `/review` 在 Stage 1 零命中时仍进入 LLM fallback，而不是直接误报“检查通过”。
+- **subagent 输出的关键片段或链接**：新增 `app/rules/python_ast.py` 中的 `python.none-dereference` 与 `python.missing-await` 规则，以及 `app/review/orchestrator.py` 中的 `build_llm_fallback_hits(...)`；对应补充 `tests/unit/test_rules_python_ast.py`、`tests/unit/test_orchestrator.py` 和 `tests/integration/test_github_review_service.py`。定向验证 `uv run pytest tests/unit/test_rules_python_ast.py -q`、`uv run pytest tests/unit/test_orchestrator.py -q`、`uv run pytest tests/integration/test_github_review_service.py -q` 全部通过；随后 `uv run pytest -q` 全量通过，结果为 `25 passed in 0.66s`。
+- **人工干预**：用户明确指出“静态规则覆盖不到的问题不能被渲染成检查通过”，要求 `/review` 命令触发必须保留完整审查语义；据此优先把 LLM fallback 从可选优化提升为 Task 18 的硬性行为约束。
+- **学到的教训**：如果 `/review` 的 Stage 2 调用严格依赖 Stage 1 命中，系统会把“规则覆盖不到的明显错误”错误地渲染成“检查通过”；命令触发模式必须保留 LLM fallback，才能符合显式请求完整审查的用户预期。
 
-## 2026-05-29 Task 18 detail: static rules expansion and LLM fallback
-- **时间戳与 task 编号**：2026-05-29 / Task 18 detail
-- **触发的 Superpowers 技能**：`test-driven-development`
-- **关键 prompt / context 配置**：根据用户反馈，优先补齐两类关键缺口：一是扩展 Python 静态规则覆盖 `None` 风险和缺失 `await`；二是让 `/review` 命令在 Stage 1 零命中时仍触发 DeepSeek/OpenAI-compatible Stage 2 审阅，而不是直接误报“检查通过”。
-- **代码改动**：
-- `app/rules/python_ast.py`：新增 `python.none-dereference` 与 `python.missing-await` 两类 AST 启发式规则，同时保留原有 `python.async-blocking-io`。
-- `app/review/orchestrator.py`：新增 `build_llm_fallback_hits(...)`，使 `trigger_type == "command"` 时即便 Stage 1 无命中，也会为每个改动文件构造 fallback 候选并进入 `run_stage_two(...)`。
-- `tests/unit/test_rules_python_ast.py`：新增 `dict.get(...)` 后属性访问和 async 函数缺失 `await` 的回归测试。
-- `tests/unit/test_orchestrator.py`：新增 `/review` 零命中时仍调用 LLM 的回归测试。
-- `tests/integration/test_github_review_service.py`：新增 GitHub review service 在 Stage 1 无命中时依然调用 LLM 并回贴结果的集成测试。
-- **验证结果**：
-- `uv run pytest tests/unit/test_rules_python_ast.py -q` 通过
-- `uv run pytest tests/unit/test_orchestrator.py -q` 通过
-- `uv run pytest tests/integration/test_github_review_service.py -q` 通过
-- `uv run pytest -q` 全量通过，结果为 `25 passed in 0.66s`
-- **学到的教训**：如果 `/review` 的 Stage 2 调用严格依赖 Stage 1 命中，系统很容易把“静态规则覆盖不到的明显错误”错误地渲染成“检查通过”；命令触发模式必须保留 LLM fallback，才能符合用户对“显式请求完整审查”的预期。
+## 2026-05-29 Task 18 真实联调与兼容性补强
 
+- **时间戳与 task 编号**：2026-05-29 / Task 18
+- **触发的 Superpowers 技能**：`test-driven-development`、`systematic-debugging`
+- **关键 prompt / context 配置**：在 Task 18 的规则扩展完成后，用户继续要求把真实 GitHub App + DeepSeek 审查链路打通；重点不是“评论能发出去”，而是要让真实 PR 暴露出的错误能被模型发现并稳定回贴。
+- **subagent 输出的关键片段或链接**：围绕真实 PR `karendirecter/notion-lite#2` 多次重放 `/review`，补强 `app/llm/openai_compatible.py` 中 `response_format={"type":"json_object"}` 失败时的自动回退逻辑、`app/review/schema.py` 中逐条容错的 `validate_llm_payload(...)`，以及 `app/review/orchestrator.py` 中字符串 finding 的兜底转换。同步补充 `tests/unit/test_llm_client.py`、`tests/unit/test_schema_validation.py`、`tests/unit/test_orchestrator.py` 与 `tests/integration/test_github_review_service.py`，`uv run pytest -q` 全量通过，结果为 `39 passed in 0.85s`。真实 PR 最终一次重放中，issue comment 从 `4` 增至 `5`，review inline comment 从 `0` 增至 `3`，顶层总结回贴为 `Final findings: 3`，其中至少 1 条真实指出了 `update_page_blocks` 在 `page is None` 时会触发 `AttributeError`。
+- **人工干预**：用户明确要求验证“真实错误能否被发现并稳定回贴”，而不是只接受本地假数据通过；在 GitHub API 与 DeepSeek 接口存在证书校验问题时，也要求继续完成真实联通诊断，因此诊断阶段临时采用 `verify=False` 完成宿主机侧验证，并据此反推兼容性缺口。
+- **学到的教训**：OpenAI-compatible 并不等于所有模型都支持 `response_format={"type":"json_object"}`；真实 LLM 输出经常只“半结构化”，工程上必须补上“字段可推断则补全”和“单条坏 finding 不拖垮整次审查”的兜底。
 
-## 2026-06-01 Task 19-25 管理员监控器与双 Agent 协作修复
+## 2026-06-01 Task 19-25 TDD 进展（Step 1-4）
 
 - **时间戳与 task 编号**：2026-06-01 / Task 19-25
 - **触发的 Superpowers 技能**：`test-driven-development`、`systematic-debugging`
-- **关键 prompt / context 配置**：用户反馈 `task19-visualization` 分支上的 GitHub App 在线审查在 GitHub 页面持续提示“LLM 复核没有产出有效结果；本次自动审查已降级”；本地可视化页面只能看到 `inspector` 输出，看不到 `fixer` 输出和 `final findings`；对照 `task18-detail` 可确认旧版本虽然没有管理员监控器与双 agent 拆分，但能稳定在 GitHub 上展示审查结论。
-- **对话中定位出的真实现象**：
-  - 先对比 `task18-detail` 与 `task19-visualization` 的 `app/review/orchestrator.py`、`app/review/schema.py`、GitHub review service 与前端可视化读取逻辑，初步判断不是前端展示缺失，而是后端在 `inspector -> fixer -> final findings` 之间丢失了有效 finding。
-  - 新增回归测试后，先复现了“模型只返回半结构化 finding 对象时，`inspector` trace 会落库，但 schema 校验失败导致 `fixer` 不会启动、最终 findings 为空”的问题。
-  - 用户补充说明已在 `task19` 下执行 `docker compose down` 与 `docker compose up -d --build` 但现象不变；随后直接校验本地源码与镜像内 `/app/app/review/orchestrator.py` 的 SHA256，一致，确认不是“未重启”或“镜像未重建”。
-  - 继续通过容器暴露的 `/api/review-runs` 读取真实运行记录，抓到线上 payload：`inspector` 实际已经返回了完整问题描述，但 `verdict` 被模型写成了 `"reject"`，当前 `task19` 代码会无条件丢弃所有 `reject` finding，导致 `fixer` 根本不运行，最终 GitHub 只发 summary degradation comment。
-- **代码修复**：
-  - `app/review/orchestrator.py`
-    - 为 `inspector` 与 `fixer` 增加对象级兜底恢复逻辑：当 LLM 返回半结构化 finding、缺少 `file_path` / `line_number` / `original_code_snippet` 等锚点字段时，使用当前 `IssueHit` 与 `ChangedFile` 自动补全为可继续处理的 `ReviewFinding`。
-    - 将 `inspector` 的 fallback finding 从“直接返回结果”改为“恢复 finding 后继续驱动 `fixer`”，修复“只有 inspector trace，没有 fixer trace / final findings”的断链。
-    - 为 `llm.full-review-fallback` 场景新增 `should_salvage_rejected_finding(...)`：当模型把明确的问题描述错误标成 `verdict: "reject"` 时，不再无条件丢弃，而是保留为 fallback finding 继续进入 fixer 流程。
-    - 修正 `first_changed_line(...)` 的实现，改为定位 hunk 内第一个真实新增行，而不是直接返回 hunk header 的起始行。
-  - `tests/unit/test_orchestrator.py`
-    - 新增“半结构化 inspector / fixer payload 仍能产出 findings”回归测试。
-    - 新增“fallback 场景下 inspector 错写 `reject` 仍能恢复并驱动 fixer”的回归测试。
-  - `tests/integration/test_github_review_service.py`
-    - 新增真实集成路径测试，覆盖 GitHub review service 在上述两类 payload 下仍能发布 summary 与 inline comment。
-- **管理员监控器相关交付**：
-  - 当前 worktree 同时包含 review run 持久化、agent trace 入库、本地回放 API、模型切换、前端可视化等管理员监控器能力；本次修复保证这些监控界面不再只显示孤立的 `inspector` 原始输出，而能看到完整的 `fixer` 与最终 findings 链路。
-- **验证结果**：
-  - 定向回归：`uv run pytest tests/unit/test_orchestrator.py tests/integration/test_github_review_service.py -q`，先后得到 `11 passed` 与引入真实 `reject` payload 回归后 `13 passed`。
-  - 全量回归：`uv run pytest -q`，修复前一次通过为 `54 passed in 1.38s`，纳入真实线上 `reject` 兼容逻辑后再次通过，结果为 `56 passed in 1.42s`。
-  - 运行时排查：`docker run --rm task19-visualization-review-app ...` 校验镜像内 orchestrator 文件 hash 与工作区源码一致；`docker logs github-pr-auto-review` 与 `/api/review-runs` 返回值共同证明线上异常来自模型返回的 `verdict` 与 fallback 协议错位，而不是容器未更新。
-- **人工干预**：
-  - 用户在排查过程中主动说明已手动执行 `docker compose down` / `docker compose up -d --build`，并要求确认是否是重启问题；据此增加了“镜像内外代码 hash 一致性校验”与“直接读取 review run 落库结果”的取证步骤。
-- **学到的教训**：
-  - 管理员监控器只做展示是不够的，必须能回放真实审查 payload 并看到 agent trace、result payload 与 GitHub comment 之间的闭环，否则很难区分“前端没显示”与“后端根本没产出”。
-  - 双 Agent 协作链路中，`verdict`、`file_path`、`line_number` 等字段一旦被真实模型轻微偏离 contract，就会放大成整条链路中断；编排层必须具备比 schema 层更强的恢复能力。
-  - 对 Docker 形态的线上故障，优先校验镜像内文件 hash 与真实运行 payload，比单纯重复重启容器更快锁定问题边界。
-## 2026-06-01 Task 26 并发队列、任务锁与重启恢复
+- **关键 prompt / context 配置**：用户反馈 `task19-visualization` 分支上的 GitHub App 在线审查在 GitHub 页面持续提示“LLM 复核没有产出有效结果；本次自动审查已降级”；本地可视化页面只能看到 `inspector` 输出，看不到 `fixer` 输出和 `final findings`；并明确要求对照 `task18-detail` 的稳定版本排查，不接受只看前端页面的猜测式修复。
+- **subagent 输出的关键片段或链接**：先新增回归测试复现“半结构化 finding 导致 `fixer` 不启动、最终 findings 为空”的断链问题，再在 `app/review/orchestrator.py` 中补上 `inspector` / `fixer` 的对象级兜底恢复、`should_salvage_rejected_finding(...)` 以及 `first_changed_line(...)` 的修正；同时补充 `tests/unit/test_orchestrator.py` 和 `tests/integration/test_github_review_service.py`。定向回归 `uv run pytest tests/unit/test_orchestrator.py tests/integration/test_github_review_service.py -q` 先后得到 `11 passed` 与 `13 passed`；纳入真实线上 `reject` payload 兼容逻辑后，`uv run pytest -q` 全量通过，结果为 `56 passed in 1.42s`。
+- **人工干预**：用户指出三条关键现象被直接写进了改动依据里：一是旧的 `task18-detail` 分支虽然没有管理员监控器，但 GitHub 审查是稳定的；二是已经手动执行过 `docker compose down` / `docker compose up -d --build` 但现象不变，因此不能再把问题归因为“没重启”；三是要求确认本地可视化里看不到 `fixer` 和 `final findings` 到底是前端显示问题还是后端没产出。基于这些人工提示，排查顺序被改成“源码与镜像 hash 一致性校验 → 直接读取 `/api/review-runs` 落库 payload → 反推 `verdict` 与 fallback 协议错位”，而不是盲目重构前端。
+- **学到的教训**：管理员监控器只做展示是不够的，必须能回放真实审查 payload 并看到 agent trace、result payload 与 GitHub comment 之间的闭环；对 Docker 形态的线上故障，优先校验镜像内文件 hash 与真实运行 payload，比单纯重复重启容器更快锁定问题边界。
+
+## 2026-06-01 Task 26 TDD 进展（Step 1-4）
 
 - **时间戳与 task 编号**：2026-06-01 / Task 26
 - **触发的 Superpowers 技能**：`test-driven-development`、`systematic-debugging`
-- **关键 prompt / context 配置**：用户要求继续完善任务锁和并发队列，明确希望在 `task26` 分支内直接落地“同 PR 串行、不同 PR 并发、过期任务取消、重启可恢复”的方案，并同步更新 `PLAN.md`、`SPEC.md`、`README.md` 与 `AGENT_LOG.md`。
-- **实现内容**：
-  - 新增内存队列与 PR 级锁：`app/review/queue.py` 负责按 `repo_owner + repo_name + pr_number` 串行化同一 PR 的任务，同时允许不同 PR 并发执行。
-  - 将 webhook 入口改为“先入队，再执行”：`app/main.py` 不再把 payload 直接塞给同步 review，而是交给 `enqueue_issue_comment(...)`。
-  - 为 `GitHubReviewService` 增加 `queued`、`running`、`stale`、`cancelled` 状态流转，并在评论发布前重新检查 `head.sha`，防止过期任务污染最新 PR。
-  - 增加恢复能力：容器或进程重启后，数据库中残留的 `queued/running` 任务可重新恢复入队；同一 PR 的旧任务会被降级或取消，仅保留最新有效任务。
-  - 给 Docker Compose 增加 `review-data` volume，把 `.data/review_runs.db` 持久化到宿主/卷中，避免历史任务和队列状态在 `down/up --build` 后丢失。
-- **文档更新**：
-  - `README.md` 顶部新增系统结构流程图，并补充技术亮点与解决的工程问题，突出 PR 级锁、可恢复队列、双 Agent 协作和监控器闭环。
-  - `PLAN.md` 补充 Task 26 的设计、验证命令与验收结果。
-  - `SPEC.md` 补充并发、恢复与 stale 任务的系统约束。
-- **测试补充**：
-  - 新增队列并发与同 PR 串行回归测试。
-  - 新增重复触发取消旧队列任务、PR head 变化后转 stale 的集成测试。
-  - 新增 repository 的按 PR 活动任务查询测试。
-- **验证结果**：
-  - 定向回归：`uv run pytest tests/integration/test_review_runs_api.py tests/integration/test_github_webhook_route.py tests/integration/test_github_review_service.py tests/unit/test_review_queue.py tests/unit/test_review_run_repository.py -q`，结果 `20 passed`。
-  - 全量回归：`uv run pytest -q`，结果 `62 passed in 2.45s`。
-- **学到的教训**：
-  - 并发不是“多线程”本身，而是“调度、锁、状态机、持久化、恢复”五件事必须一起成立。
-  - 只做内存队列不够，必须把历史任务和 pending 状态一起持久化，否则容器重启后监控器会失真。
-  - stale 检查必须发生在“发布评论前”的最后一跳，而不是只在入队时检查一次。
+- **关键 prompt / context 配置**：用户要求继续完善任务锁和并发队列，明确希望在 `task26` 分支内直接落地“同 PR 串行、不同 PR 并发、过期任务取消、重启可恢复”的方案，并要求把这些约束同步反映到 `PLAN.md`、`SPEC.md`、`README.md` 与 `AGENT_LOG.md`。
+- **subagent 输出的关键片段或链接**：先补回归测试，再引入 `app/review/queue.py` 的 PR 级锁与内存队列，把 webhook 入口改为“先入队再执行”，并为 `GitHubReviewService` 增加 `queued`、`running`、`stale`、`cancelled` 状态流转和恢复逻辑；同时在 `docker-compose.yml` 中加入 `review-data` volume 持久化 `.data/review_runs.db`。新增队列并发、重复触发取消旧任务、PR head 变化后转 stale、repository 活动任务查询等测试。定向回归 `uv run pytest tests/integration/test_review_runs_api.py tests/integration/test_github_webhook_route.py tests/integration/test_github_review_service.py tests/unit/test_review_queue.py tests/unit/test_review_run_repository.py -q` 结果为 `20 passed`；`uv run pytest -q` 全量通过，结果为 `62 passed in 2.45s`。
+- **人工干预**：用户明确要求这轮改动不只写代码，还要把并发与恢复方案同步补进文档，避免实现已经变化而 `SPEC.md`、`README.md` 和 `AGENT_LOG.md` 仍停留在旧的单任务同步评审叙述；因此本 task 里文档更新被当成和代码实现同级的交付要求，而不是收尾附带动作。
+- **学到的教训**：并发不是“多线程”本身，而是“调度、锁、状态机、持久化、恢复”五件事必须一起成立；只做内存队列不够，必须把历史任务和 pending 状态一起持久化，否则容器重启后监控器会失真。
